@@ -29,7 +29,7 @@ func run() error {
 	users := map[string]string{"testuser": "testuserproxy"}
 	s := server.New(server.Config{
 		Logger: logger,
-		Pool: pool.NewFixedPool(func(num int) *worker.Worker {
+		Pool: pool.NewPreallocatedPool(func(num int) *worker.Worker {
 			return worker.New(num, filter.NewParseFilter(
 				filter.NewAuthFilter(users),
 				filter.NewForwardFilter(filter.NewDispatchFilter(dispatcher.NewTCPDispatcher(server.DefaultBufferSize))),

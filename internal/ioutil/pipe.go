@@ -2,8 +2,6 @@ package ioutil
 
 import (
 	"io"
-
-	"golang.org/x/sync/errgroup"
 )
 
 const DefaultPipeBufferSize = 1024
@@ -18,14 +16,14 @@ func PipeSize(src, dst io.ReadWriter, n int) error {
 }
 
 func PipeBuffer(src, dst io.ReadWriter, sbuf, dbuf []byte) error {
-	var g errgroup.Group
-	g.Go(func() error {
-		return pipe(src, dst, sbuf)
-	})
-	g.Go(func() error {
-		return pipe(dst, src, dbuf)
-	})
-	return g.Wait()
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- pipe(src, dst, sbuf)
+	}()
+	go func() {
+		errCh <- pipe(dst, src, dbuf)
+	}()
+	return <-errCh
 }
 
 func pipe(src io.Reader, dst io.Writer, buf []byte) error {

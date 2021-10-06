@@ -20,7 +20,7 @@ type serverTestSuite struct {
 	suite.Suite
 
 	client   *http.Client
-	pool     *pool.AsyncPool
+	pool     *pool.SinglePool
 	server   *Server
 	listener *Listener
 }
@@ -35,7 +35,7 @@ func (ts *serverTestSuite) SetupSuite() {
 	logger := zap.NewExample()
 	user, pass := "testuser", "testpass"
 
-	ts.pool = pool.NewAsyncPool(worker.New(0,
+	ts.pool = pool.NewSinglePool(worker.New(0,
 		filter.NewParseFilter(
 			filter.NewAuthFilter(map[string]string{user: pass}),
 			filter.NewForwardFilter(filter.NewDispatchFilter(dispatcher.NewTCPDispatcher(DefaultBufferSize))),
