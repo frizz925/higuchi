@@ -8,32 +8,33 @@ import (
 	"go.uber.org/atomic"
 )
 
-type AsyncPool struct {
+type SinglePool struct {
 	worker  *worker.Worker
-	taskCh  chan asyncTask
+	taskCh  chan singleTask
 	stopCh  chan struct{}
 	wg      sync.WaitGroup
 	running atomic.Bool
 }
 
-type asyncTask struct {
+type singleTask struct {
 	ctx      *filter.Context
 	callback Callback
 }
 
-func NewAsyncPool(w *worker.Worker) *AsyncPool {
-	return &AsyncPool{
+func NewSinglePool(w *worker.Worker) *SinglePool {
+	return &SinglePool{
 		worker: w,
-		taskCh: make(chan asyncTask),
+		taskCh: make(chan singleTask),
 		stopCh: make(chan struct{}, 1),
 	}
 }
 
-func (p *AsyncPool) Start() {
+func (p *SinglePool) Start() {
 	if p.running.Load() {
 		return
 	}
 	p.running.Store(true)
+	p.wg.Add(1)
 
 	go func() {
 		defer p.wg.Done()
@@ -48,7 +49,7 @@ func (p *AsyncPool) Start() {
 	}()
 }
 
-func (p *AsyncPool) Stop() {
+func (p *SinglePool) Stop() {
 	if !p.running.Load() {
 		return
 	}
@@ -56,6 +57,6 @@ func (p *AsyncPool) Stop() {
 	p.wg.Wait()
 }
 
-func (p *AsyncPool) Dispatch(ctx *filter.Context, callback Callback) {
-	p.taskCh <- asyncTask{ctx, callback}
+func (p *SinglePool) Dispatch(ctx *filter.Context, callback Callback) {
+	p.taskCh <- singleTask{ctx, callback}
 }
