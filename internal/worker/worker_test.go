@@ -7,20 +7,24 @@ import (
 	"github.com/frizz925/higuchi/internal/filter"
 	"github.com/frizz925/higuchi/internal/testutil"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestWorker(t *testing.T) {
 	require := require.New(t)
 	expected := []byte("expected")
 
-	w := New(filter.FilterFunc(func(conn net.Conn) error {
-		return testutil.EchoReadWriter(conn)
+	w := New(filter.FilterFunc(func(c *filter.Context) error {
+		return testutil.EchoReadWriter(c)
 	}))
 
 	c1, c2 := net.Pipe()
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- w.Handle(c2)
+		errCh <- w.Handle(&filter.Context{
+			Conn:   c2,
+			Logger: zap.NewExample(),
+		})
 		close(errCh)
 	}()
 

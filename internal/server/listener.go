@@ -3,9 +3,12 @@ package server
 import (
 	"io"
 	"net"
+	"net/http"
+	"net/http/httputil"
 	"sync"
 
 	"github.com/frizz925/higuchi/internal/errors"
+	"github.com/frizz925/higuchi/internal/filter"
 	"github.com/frizz925/higuchi/internal/pool"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -47,30 +50,41 @@ func (l *Listener) stop() error {
 func (l *Listener) runRoutine() {
 	defer l.wg.Done()
 	for l.running.Load() {
-		c, err := l.Accept()
+		conn, err := l.Accept()
 		if err != nil {
 			if err != io.EOF {
-				l.logger.Error("failed to accept connection", zap.Error(err))
+				l.logger.Error("Failed to accept connection", zap.Error(err))
 			}
 			continue
 		}
-		l.logger.Info("accepted connection", zap.String("src", c.RemoteAddr().String()))
-		l.pool.Dispatch(c, l.connCallback)
+		logger := l.logger.With(zap.String("src", conn.RemoteAddr().String()))
+		logger.Info("Accepted connection")
+		l.pool.Dispatch(&filter.Context{
+			Conn:   conn,
+			Logger: logger,
+		}, l.connCallback)
 	}
 }
 
-func (l *Listener) connCallback(c net.Conn, err error) {
-	raddr := c.RemoteAddr().String()
-	logger := l.logger.With(zap.String("src", raddr))
+func (l *Listener) connCallback(c *filter.Context, err error) {
+	logger := c.Logger
 	if err != nil {
-		logger = logger.With(zap.Error(err))
-		if v, ok := err.(*errors.EstablishedError); ok {
-			logger.Error("connection error")
+		var res http.Response
+		if v, ok := err.(*errors.HTTPError); ok {
+			res.StatusCode = v.StatusCode
+			logger.Error("Proxy error", zap.Error(err))
 		} else {
-			logger.Error("proxy error", zap.String("user", v.User.Username()), zap.String("dst", v.Destination.String()))
+			res.StatusCode = http.StatusInternalServerError
+			logger.Error("Connection error", zap.Error(err))
+		}
+		b, err := httputil.DumpResponse(&res, false)
+		if err != nil {
+			logger.Error("Failed creating response", zap.Error(err))
+		} else if _, err := c.Write(b); err != nil {
+			logger.Error("Failed writing response", zap.Error(err))
 		}
 	}
 	if err := c.Close(); err != nil {
-		logger.Error("close connection error", zap.Error(err))
+		logger.Error("Close connection error", zap.Error(err))
 	}
 }

@@ -9,6 +9,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const DefaultBufferSize = 1024
+
 var (
 	ErrServerAlreadyRunning = errors.New("server already running")
 	ErrServerNotRunning     = errors.New("server not running")
@@ -46,7 +48,7 @@ func (s *Server) Listen(network string, address string) (*Listener, error) {
 	ls := &Listener{
 		Listener:       l,
 		pool:           s.pool,
-		logger:         s.logger.With(zap.String("Listener", l.Addr().String())),
+		logger:         s.logger.With(zap.String("listener", l.Addr().String())),
 		removeListener: s.removeListener,
 	}
 	ls.start()

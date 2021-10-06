@@ -2,7 +2,6 @@ package filter
 
 import (
 	"bufio"
-	"net"
 	"net/http"
 	"net/http/httputil"
 
@@ -23,19 +22,21 @@ func NewParseFilter(filters ...HTTPFilter) *ParseFilter {
 	}
 }
 
-func (pf *ParseFilter) Do(conn net.Conn) error {
-	pf.buffer.Reset(conn)
+func (pf *ParseFilter) Do(c *Context) error {
+	pf.buffer.Reset(c)
 	req, err := http.ReadRequest(pf.buffer)
 	if err != nil {
 		return err
 	}
+	req.URL.Scheme = "http"
+	req.URL.Host = req.Host
 	b, err := httputil.DumpRequestOut(req, true)
 	if err != nil {
 		return err
 	}
-	conn = netutil.NewPrefixedConn(conn, b)
+	c.Conn = netutil.NewPrefixedConn(c.Conn, b)
 	for _, f := range pf.filters {
-		if err := f.Do(conn, req); err != nil {
+		if err := f.Do(c, req); err != nil {
 			return err
 		}
 	}

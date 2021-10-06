@@ -8,6 +8,7 @@ import (
 	"github.com/frizz925/higuchi/internal/dispatcher"
 	"github.com/frizz925/higuchi/internal/testutil"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestDispatchFilter(t *testing.T) {
@@ -20,7 +21,10 @@ func TestDispatchFilter(t *testing.T) {
 	}))
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- df.Do(c2, "")
+		errCh <- df.Do(&Context{
+			Conn:   c2,
+			Logger: zap.NewExample(),
+		}, "")
 		close(errCh)
 	}()
 

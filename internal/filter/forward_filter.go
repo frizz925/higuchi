@@ -3,6 +3,8 @@ package filter
 import (
 	"net"
 	"net/http"
+
+	"go.uber.org/zap"
 )
 
 type ForwardFilter struct {
@@ -13,7 +15,7 @@ func NewForwardFilter(filters ...NetFilter) *ForwardFilter {
 	return &ForwardFilter{filters}
 }
 
-func (ff *ForwardFilter) Do(conn net.Conn, req *http.Request) error {
+func (ff *ForwardFilter) Do(c *Context, req *http.Request) error {
 	hostport := req.Host
 	host, port, err := net.SplitHostPort(hostport)
 	if err != nil {
@@ -21,8 +23,9 @@ func (ff *ForwardFilter) Do(conn net.Conn, req *http.Request) error {
 		port = "80"
 	}
 	addr := net.JoinHostPort(host, port)
+	c.Logger = c.Logger.With(zap.String("dst", addr))
 	for _, f := range ff.filters {
-		if err := f.Do(conn, addr); err != nil {
+		if err := f.Do(c, addr); err != nil {
 			return err
 		}
 	}

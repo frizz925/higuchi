@@ -1,13 +1,15 @@
 package main
 
 import (
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/frizz925/higuchi/internal/dispatcher"
+	"github.com/frizz925/higuchi/internal/filter"
 	"github.com/frizz925/higuchi/internal/pool"
 	"github.com/frizz925/higuchi/internal/server"
+	"github.com/frizz925/higuchi/internal/worker"
 	"go.uber.org/zap"
 )
 
@@ -24,29 +26,26 @@ func run() error {
 	}
 	defer logger.Sync()
 
-	listener, err := net.Listen("tcp", "0.0.0.0:8080")
-	if err != nil {
-		return err
-	}
-	defer listener.Close()
-
-	pool := pool.NewFixedPool(pool.FixedPoolConfig{
+	users := map[string]string{"testuser": "proxytestpass"}
+	s := server.New(server.Config{
 		Logger: logger,
+		Pool: pool.NewFixedPool(func(num int) *worker.Worker {
+			return worker.New(filter.NewParseFilter(
+				filter.NewAuthFilter(users),
+				filter.NewForwardFilter(
+					filter.NewDispatchFilter(dispatcher.NewTCPDispatcher(server.DefaultBufferSize)),
+				),
+			))
+		}, 1024),
 	})
-	server := server.New(server.Config{
-		Logger:   logger,
-		Listener: listener,
-		Pool:     pool,
-	})
-	if err := server.Start(); err != nil {
+
+	if _, err := s.Listen("tcp", "0.0.0.0:8080"); err != nil {
 		return err
 	}
-	defer server.Stop()
+	logger.Info("Higuchi listening at :8080")
 
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
-	sig := <-ch
-	logger.Info("received signal", zap.String("signal", sig.String()))
-
-	return nil
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	<-sigCh
+	return s.Close()
 }

@@ -3,16 +3,23 @@ package filter
 import (
 	"net"
 	"net/http"
+
+	"go.uber.org/zap"
 )
 
+type Context struct {
+	net.Conn
+	Logger *zap.Logger
+}
+
 type Filter interface {
-	Do(conn net.Conn) error
+	Do(c *Context) error
 }
 
 type HTTPFilter interface {
-	Do(conn net.Conn, req *http.Request) error
+	Do(c *Context, req *http.Request) error
 }
 
 type NetFilter interface {
-	Do(conn net.Conn, addr string) error
+	Do(c *Context, addr string) error
 }

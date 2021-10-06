@@ -1,24 +1,21 @@
 package filter
 
-import (
-	"net"
-	"net/http"
-)
+import "net/http"
 
-type FilterFunc func(conn net.Conn) error
+type FilterFunc func(c *Context) error
 
-func (fn FilterFunc) Do(conn net.Conn) error {
-	return fn(conn)
+func (fn FilterFunc) Do(c *Context) error {
+	return fn(c)
 }
 
-type HTTPFilterFunc func(conn net.Conn, req *http.Request) error
+type HTTPFilterFunc func(c *Context, req *http.Request) error
 
-func (fn HTTPFilterFunc) Do(conn net.Conn, req *http.Request) error {
-	return fn(conn, req)
+func (fn HTTPFilterFunc) Do(c *Context, req *http.Request) error {
+	return fn(c, req)
 }
 
-type NetFilterFunc func(conn net.Conn, addr string) error
+type NetFilterFunc func(c *Context, addr string) error
 
-func (fn NetFilterFunc) Do(conn net.Conn, addr string) error {
-	return fn(conn, addr)
+func (fn NetFilterFunc) Do(c *Context, addr string) error {
+	return fn(c, addr)
 }

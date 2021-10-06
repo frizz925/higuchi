@@ -10,12 +10,13 @@ import (
 
 	"github.com/frizz925/higuchi/internal/testutil"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestParseFilter(t *testing.T) {
 	require := require.New(t)
 	expectedBody, expectedHost := "expected", "localhost"
-	pf := NewParseFilter(HTTPFilterFunc(func(conn net.Conn, req *http.Request) error {
+	pf := NewParseFilter(HTTPFilterFunc(func(c *Context, req *http.Request) error {
 		defer req.Body.Close()
 		var buf bytes.Buffer
 		res := fmt.Sprintf("host=%s body=", req.Host)
@@ -25,7 +26,7 @@ func TestParseFilter(t *testing.T) {
 		if _, err := buf.ReadFrom(req.Body); err != nil && err != io.EOF {
 			return err
 		}
-		if _, err := buf.WriteTo(conn); err != nil {
+		if _, err := buf.WriteTo(c); err != nil {
 			return err
 		}
 		return nil
@@ -34,12 +35,16 @@ func TestParseFilter(t *testing.T) {
 	c1, c2 := net.Pipe()
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- pf.Do(c2)
+		defer c2.Close()
+		errCh <- pf.Do(&Context{
+			Conn:   c2,
+			Logger: zap.NewExample(),
+		})
 		close(errCh)
 	}()
 
 	_, err := c1.Write(testutil.LinesToRawRequest(
-		fmt.Sprintf("GET http://%s/ HTTP/1.1", expectedHost),
+		"GET / HTTP/1.1",
 		fmt.Sprintf("Host: %s", expectedHost),
 		"User-Agent: curl/7.64.1",
 		"Accept: */*",
@@ -53,6 +58,7 @@ func TestParseFilter(t *testing.T) {
 
 	buf := make([]byte, 512)
 	n, err := c1.Read(buf)
+	require.NoError(<-errCh)
 	require.NoError(err)
 
 	var (

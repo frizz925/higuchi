@@ -17,13 +17,14 @@ func TestTCPDispatcher(t *testing.T) {
 
 	sentCh := make(chan []byte, 1)
 	errCh := make(chan error, 1)
-	go func(errCh chan<- error) {
+	go func() {
 		defer close(errCh)
 		c, err := l.Accept()
 		if err != nil {
 			errCh <- err
 			return
 		}
+		defer c.Close()
 		sent := make([]byte, 512)
 		n, err := c.Read(sent)
 		if err != nil {
@@ -35,17 +36,17 @@ func TestTCPDispatcher(t *testing.T) {
 		if err != nil {
 			errCh <- err
 		}
-	}(errCh)
+	}()
 
 	c1, c2 := net.Pipe()
-	go DefaultTCPDispatcher.Dispatch(c2, laddr)
+	go NewTCPDispatcher(512).Dispatch(c2, laddr)
 	_, err = c1.Write(expected)
 	require.NoError(err)
 
 	buf := make([]byte, 512)
 	n, err := c1.Read(buf)
-	require.NoError(err)
 	require.NoError(<-errCh)
+	require.NoError(err)
 	recv := buf[:n]
 
 	require.Equal(expected, recv)

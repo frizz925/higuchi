@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/frizz925/higuchi/internal/dispatcher"
+	"github.com/frizz925/higuchi/internal/filter"
 	"github.com/frizz925/higuchi/internal/pool"
 	"github.com/frizz925/higuchi/internal/worker"
 	"github.com/stretchr/testify/suite"
@@ -32,8 +33,17 @@ func (ts *serverTestSuite) SetupSuite() {
 	logger, err := zap.NewDevelopment()
 	require.NoError(err)
 
+	username, password := "user", "pass"
+
+	users := map[string]string{username: password}
 	ts.server = New(Config{
-		Pool:   pool.NewSyncPool(worker.New(dispatcher.DefaultTCPDispatcher)),
+		Pool: pool.NewAsyncPool(func(num int) *worker.Worker {
+			pf := filter.NewParseFilter(
+				filter.NewAuthFilter(users),
+				filter.NewForwardFilter(filter.NewDispatchFilter(dispatcher.NewTCPDispatcher(DefaultBufferSize))),
+			)
+			return worker.New(pf)
+		}),
 		Logger: logger,
 	})
 
@@ -41,6 +51,7 @@ func (ts *serverTestSuite) SetupSuite() {
 	require.NoError(err)
 	proxyUrl := &url.URL{
 		Host: ts.listener.Addr().String(),
+		User: url.UserPassword(username, password),
 	}
 
 	ts.client = &http.Client{

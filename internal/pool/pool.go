@@ -1,15 +1,14 @@
 package pool
 
 import (
-	"net"
-
+	"github.com/frizz925/higuchi/internal/filter"
 	"github.com/frizz925/higuchi/internal/worker"
 )
 
-type Factory func() *worker.Worker
+type Factory func(num int) *worker.Worker
 
-type Callback func(conn net.Conn, err error)
+type Callback func(ctx *filter.Context, err error)
 
 type Pool interface {
-	Dispatch(conn net.Conn, callback Callback)
+	Dispatch(ctx *filter.Context, callback Callback)
 }
