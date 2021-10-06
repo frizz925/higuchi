@@ -25,6 +25,8 @@ func (af *AuthFilter) Do(c *Context, req *http.Request) error {
 	if auth == "" {
 		return errFromContextAndRequest(c, req, "authorization required", http.StatusProxyAuthRequired)
 	}
+	req.Header.Del("Proxy-Authorization")
+
 	parts := strings.Split(auth, " ")
 	if len(parts) < 2 {
 		return errFromContextAndRequest(c, req, "malformed authorization value", http.StatusBadRequest)
