@@ -33,11 +33,13 @@ func (ts *serverTestSuite) SetupSuite() {
 	var err error
 	require := ts.Require()
 	logger := zap.NewExample()
+	user, pass := "testuser", "testpass"
 
 	ts.pool = pool.NewAsyncPool(worker.New(0,
-		filter.NewParseFilter(filter.NewForwardFilter(
-			filter.NewDispatchFilter(dispatcher.NewTCPDispatcher(DefaultBufferSize)),
-		)),
+		filter.NewParseFilter(
+			filter.NewAuthFilter(map[string]string{user: pass}),
+			filter.NewForwardFilter(filter.NewDispatchFilter(dispatcher.NewTCPDispatcher(DefaultBufferSize))),
+		),
 	))
 	ts.pool.Start()
 
@@ -50,6 +52,7 @@ func (ts *serverTestSuite) SetupSuite() {
 	require.NoError(err)
 	proxyUrl := &url.URL{
 		Host: ts.listener.Addr().String(),
+		User: url.UserPassword(user, pass),
 	}
 
 	ts.client = &http.Client{
@@ -70,8 +73,10 @@ func (ts *serverTestSuite) TestE2E() {
 	require := ts.Require()
 	srv, expected, err := createTestWebServer()
 	require.NoError(err)
+	defer srv.Close()
 	res, err := ts.client.Get(srv.URL)
 	require.NoError(err)
+	defer res.Body.Close()
 	resBody, err := ioutil.ReadAll(res.Body)
 	require.NoError(err)
 	require.Equal(expected, resBody)

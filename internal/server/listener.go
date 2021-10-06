@@ -1,7 +1,6 @@
 package server
 
 import (
-	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -52,10 +51,7 @@ func (l *Listener) runRoutine() {
 	for l.running.Load() {
 		conn, err := l.Accept()
 		if err != nil {
-			if err != io.EOF {
-				l.logger.Error("Failed to accept connection", zap.Error(err))
-			}
-			continue
+			return
 		}
 		logger := l.logger.With(zap.String("src", conn.RemoteAddr().String()))
 		logger.Info("Accepted connection")
