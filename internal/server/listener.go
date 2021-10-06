@@ -65,7 +65,11 @@ func (l *Listener) runRoutine() {
 func (l *Listener) connCallback(c *filter.Context, err error) {
 	logger := c.Logger
 	if err != nil {
-		var res http.Response
+		res := &http.Response{
+			Proto:      "HTTP/1.1",
+			ProtoMajor: 1,
+			ProtoMinor: 1,
+		}
 		if v, ok := err.(*errors.HTTPError); ok {
 			res.StatusCode = v.StatusCode
 			logger.Error("Proxy error", zap.Error(err))
@@ -73,7 +77,7 @@ func (l *Listener) connCallback(c *filter.Context, err error) {
 			res.StatusCode = http.StatusInternalServerError
 			logger.Error("Connection error", zap.Error(err))
 		}
-		b, err := httputil.DumpResponse(&res, false)
+		b, err := httputil.DumpResponse(res, false)
 		if err != nil {
 			logger.Error("Failed creating response", zap.Error(err))
 		} else if _, err := c.Write(b); err != nil {
