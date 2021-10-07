@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"net"
 	"net/http"
 	"strings"
 
@@ -34,5 +35,10 @@ func (cf *CertbotFilter) Do(ctx *Context, req *http.Request, next Next) error {
 }
 
 func (cf *CertbotFilter) checkRequest(req *http.Request) bool {
-	return req.Method == http.MethodGet && req.Host == cf.hostname && strings.HasPrefix(req.URL.Path, AcmeChallengePath)
+	hostport := req.Host
+	host, _, err := net.SplitHostPort(hostport)
+	if err != nil {
+		host = hostport
+	}
+	return req.Method == http.MethodGet && host == cf.hostname && strings.HasPrefix(req.URL.Path, AcmeChallengePath)
 }
