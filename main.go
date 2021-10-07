@@ -26,12 +26,13 @@ func run() error {
 	}
 	defer logger.Sync()
 
-	users := map[string]string{"testuser": "testuserproxy"}
+	users := map[string]string{"testuser": "proxytestpass"}
 	s := server.New(server.Config{
 		Logger: logger,
 		Pool: pool.NewPreallocatedPool(func(num int) *worker.Worker {
 			return worker.New(num, filter.NewParseFilter(
 				filter.NewAuthFilter(users),
+				filter.NewTunnelFilter(server.DefaultBufferSize),
 				filter.NewForwardFilter(filter.NewDispatchFilter(dispatcher.NewTCPDispatcher(server.DefaultBufferSize))),
 			))
 		}, 1024),
