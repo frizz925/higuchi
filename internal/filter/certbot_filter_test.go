@@ -2,6 +2,8 @@ package filter
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -44,14 +46,15 @@ func (s *certbotFilterTestSuite) SetupTest() {
 func (s *certbotFilterTestSuite) TestGet() {
 	require := s.Require()
 	cf := NewCertbotFilter(s.hostname, s.webroot)
+	host := fmt.Sprintf("%s:80", s.hostname)
 	req := &http.Request{
 		Method: http.MethodGet,
 		URL: &url.URL{
 			Scheme: "http",
-			Host:   s.hostname,
+			Host:   host,
 			Path:   path.Join(AcmeChallengePath, s.filename),
 		},
-		Host: s.hostname,
+		Host: host,
 	}
 
 	c1, c2 := net.Pipe()
@@ -59,7 +62,10 @@ func (s *certbotFilterTestSuite) TestGet() {
 
 	errCh := make(chan error, 1)
 	go func(ctx *Context, req *http.Request) {
-		errCh <- cf.Do(ctx, req, NextNoop)
+		defer ctx.Close()
+		errCh <- cf.Do(ctx, req, func() error {
+			return errors.New("unexpected next")
+		})
 		close(errCh)
 	}(&Context{
 		Conn:   c2,
