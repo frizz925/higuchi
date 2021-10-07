@@ -30,10 +30,10 @@ func run() error {
 	s := server.New(server.Config{
 		Logger: logger,
 		Pool: pool.NewPreallocatedPool(func(num int) *worker.Worker {
+			df := filter.NewDispatchFilter(dispatcher.NewTCPDispatcher(server.DefaultBufferSize))
 			return worker.New(num, filter.NewParseFilter(
 				filter.NewAuthFilter(users),
-				filter.NewTunnelFilter(server.DefaultBufferSize),
-				filter.NewForwardFilter(filter.NewDispatchFilter(dispatcher.NewTCPDispatcher(server.DefaultBufferSize))),
+				filter.NewTunnelFilter(server.DefaultBufferSize, filter.NewForwardFilter(df)),
 			))
 		}, 1024),
 	})
