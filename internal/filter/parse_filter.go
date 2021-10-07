@@ -28,6 +28,7 @@ func (pf *ParseFilter) Do(c *Context) error {
 	if err != nil {
 		return err
 	}
+	req.Header.Del("Proxy-Connection")
 	req.URL.Scheme = "http"
 	req.URL.Host = req.Host
 	b, err := httputil.DumpRequestOut(req, true)
