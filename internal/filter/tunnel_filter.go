@@ -47,6 +47,7 @@ func (tf *TunnelFilter) Do(ctx *Context, req *http.Request) error {
 	if err := tf.forward.Do(ctx, req); err != nil {
 		return err
 	}
+	ctx.Logger.Info("Established connection for tunneling")
 	b, err := httputil.DumpResponse(&http.Response{
 		StatusCode: http.StatusOK,
 		Status:     "200 Connection established",
