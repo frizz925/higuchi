@@ -1,13 +1,14 @@
 package server
 
 import (
+	"bufio"
 	"net"
 	"net/http"
-	"net/http/httputil"
 	"sync"
 
 	"github.com/frizz925/higuchi/internal/errors"
 	"github.com/frizz925/higuchi/internal/filter"
+	"github.com/frizz925/higuchi/internal/httputil"
 	"github.com/frizz925/higuchi/internal/pool"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -80,10 +81,9 @@ func (l *Listener) connCallback(c *filter.Context, err error) {
 			res.StatusCode = http.StatusInternalServerError
 			logger.Error("Connection error", zap.Error(err))
 		}
-		b, err := httputil.DumpResponse(res, false)
-		if err != nil {
-			logger.Error("Failed creating response", zap.Error(err))
-		} else if _, err := c.Write(b); err != nil {
+		bw := bufio.NewWriter(c)
+		httputil.WriteResponseHeader(res, bw)
+		if err := bw.Flush(); err != nil {
 			logger.Error("Failed writing response", zap.Error(err))
 		}
 	}
