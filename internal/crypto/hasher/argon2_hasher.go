@@ -2,9 +2,9 @@ package hasher
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"math/rand"
 	"strings"
 
 	"golang.org/x/crypto/argon2"
