@@ -16,10 +16,15 @@ func New(num int, filters ...filter.Filter) *Worker {
 
 func (w *Worker) Handle(ctx *filter.Context) error {
 	ctx.Logger = ctx.Logger.With(zap.Int("worker", w.num))
-	for _, f := range w.filters {
-		if err := f.Do(ctx); err != nil {
-			return err
+	var next filter.Next
+	idx := 0
+	next = func() error {
+		if idx >= len(w.filters) {
+			return nil
 		}
+		f := w.filters[idx]
+		idx++
+		return f.Do(ctx, next)
 	}
-	return nil
+	return next()
 }

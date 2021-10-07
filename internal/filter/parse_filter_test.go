@@ -16,7 +16,7 @@ import (
 func TestParseFilter(t *testing.T) {
 	require := require.New(t)
 	expectedBody, expectedHost := "expected", "localhost"
-	pf := NewParseFilter(HTTPFilterFunc(func(c *Context, req *http.Request) error {
+	pf := NewParseFilter(HTTPFilterFunc(func(c *Context, req *http.Request, next Next) error {
 		defer req.Body.Close()
 		var buf bytes.Buffer
 		res := fmt.Sprintf("host=%s body=", req.Host)
@@ -39,7 +39,7 @@ func TestParseFilter(t *testing.T) {
 		errCh <- pf.Do(&Context{
 			Conn:   c2,
 			Logger: zap.NewExample(),
-		})
+		}, nil)
 		close(errCh)
 	}()
 

@@ -11,7 +11,7 @@ import (
 
 func TestForwardFilter(t *testing.T) {
 	require := require.New(t)
-	ff := NewForwardFilter(NetFilterFunc(func(c *Context, addr string) error {
+	ff := NewForwardFilter(NetFilterFunc(func(c *Context, addr string, next Next) error {
 		_, err := c.Write([]byte(addr))
 		return err
 	}))
@@ -25,7 +25,7 @@ func TestForwardFilter(t *testing.T) {
 		}, &http.Request{
 			Method: http.MethodGet,
 			Host:   "localhost",
-		})
+		}, nil)
 		close(errCh)
 	}()
 

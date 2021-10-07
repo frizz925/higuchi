@@ -2,6 +2,7 @@ package errors
 
 import (
 	"net"
+	"net/http"
 	"net/url"
 )
 
@@ -11,6 +12,7 @@ type HTTPError struct {
 	Source      net.Addr
 	Listener    net.Addr
 	Destination string
+	Request     *http.Request
 	StatusCode  int
 }
 

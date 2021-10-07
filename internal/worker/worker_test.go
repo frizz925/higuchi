@@ -14,7 +14,7 @@ func TestWorker(t *testing.T) {
 	require := require.New(t)
 	expected := []byte("expected")
 
-	w := New(0, filter.FilterFunc(func(c *filter.Context) error {
+	w := New(0, filter.FilterFunc(func(c *filter.Context, _ filter.Next) error {
 		return testutil.EchoReadWriter(c)
 	}))
 
