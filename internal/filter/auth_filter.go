@@ -64,6 +64,7 @@ func errFromContextAndRequest(c *Context, req *http.Request, err string, statusC
 		Source:      c.RemoteAddr(),
 		Listener:    c.LocalAddr(),
 		Destination: req.Host,
+		Request:     req,
 		StatusCode:  statusCode,
 	}
 	if req.URL != nil && req.URL.User != nil {

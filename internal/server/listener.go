@@ -71,6 +71,9 @@ func (l *Listener) connCallback(c *filter.Context, err error) {
 			ProtoMinor: 1,
 		}
 		if v, ok := err.(*errors.HTTPError); ok {
+			res.Proto = v.Request.Proto
+			res.ProtoMajor = v.Request.ProtoMajor
+			res.ProtoMinor = v.Request.ProtoMinor
 			res.StatusCode = v.StatusCode
 			logger.Error("Proxy error", zap.Error(err))
 		} else {
