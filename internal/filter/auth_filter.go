@@ -27,6 +27,9 @@ type AuthFilter struct {
 
 func NewAuthFilter(users map[string]interface{}, compare ...AuthCompareFunc) *AuthFilter {
 	cmp := AuthCompareString
+	if len(compare) > 0 {
+		cmp = compare[0]
+	}
 	return &AuthFilter{users, cmp}
 }
 
@@ -64,5 +67,6 @@ func (af *AuthFilter) Do(c *Context, req *http.Request, next Next) error {
 	if !ok || !af.compare(pass, v) {
 		return ToHTTPError(c, req, "invalid credentials", http.StatusForbidden)
 	}
+	c.Logger.Info("Authorized user")
 	return next()
 }
