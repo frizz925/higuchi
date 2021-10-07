@@ -66,22 +66,29 @@ func (h *Argon2Hasher) Compare(password, digest string) (int, error) {
 }
 
 func (h *Argon2Hasher) Hash(password string) (string, error) {
-	salt := make([]byte, h.params.SaltLength)
-	n, err := rand.Read(salt)
+	salt, err := h.generateSalt()
 	if err != nil {
 		return "", err
 	}
-	salt = salt[:n]
 	hashed := h.hash(password, salt, h.params)
-	return h.format(hashed, salt), nil
+	return h.format(hashed, salt, h.params), nil
 }
 
-func (h *Argon2Hasher) format(hashed, salt []byte) string {
+func (h *Argon2Hasher) generateSalt() ([]byte, error) {
+	salt := make([]byte, h.params.SaltLength)
+	n, err := rand.Read(salt)
+	if err != nil {
+		return nil, err
+	}
+	return salt[:n], nil
+}
+
+func (h *Argon2Hasher) format(hashed, salt []byte, params Argon2Params) string {
 	encsalt := base64.RawStdEncoding.EncodeToString(salt)
 	enchash := base64.RawStdEncoding.EncodeToString(hashed)
 	return fmt.Sprintf(
 		PHCStringFormat,
-		argon2.Version, h.params.Memory, h.params.Time, h.params.Parallelism,
+		argon2.Version, params.Memory, params.Time, params.Parallelism,
 		fmt.Sprintf("%s$%s", encsalt, enchash),
 	)
 }
