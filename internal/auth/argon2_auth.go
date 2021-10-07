@@ -55,7 +55,7 @@ func (a *Argon2Auth) ReadPasswordsFile(name string) (Argon2Users, error) {
 }
 
 func (a *Argon2Auth) WritePasswordsFile(name string, users Argon2Users) error {
-	f, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY, 0600)
+	f, err := os.Create(name)
 	if err != nil {
 		return err
 	}
