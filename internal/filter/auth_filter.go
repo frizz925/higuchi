@@ -17,7 +17,7 @@ func NewAuthFilter(users map[string]string) *AuthFilter {
 	return &AuthFilter{users}
 }
 
-func (af *AuthFilter) Do(c *Context, req *http.Request) error {
+func (af *AuthFilter) Do(c *Context, req *http.Request, next Next) error {
 	auth := req.Header.Get("Proxy-Authorization")
 	if auth == "" {
 		return ToHTTPError(c, req, "authorization required", http.StatusProxyAuthRequired)
@@ -52,5 +52,5 @@ func (af *AuthFilter) Do(c *Context, req *http.Request) error {
 	if !ok || pass != v {
 		return ToHTTPError(c, req, "invalid credentials", http.StatusForbidden)
 	}
-	return nil
+	return next()
 }

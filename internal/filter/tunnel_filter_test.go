@@ -42,7 +42,7 @@ func TestTunnelFilter(t *testing.T) {
 	go NewTunnelFilter(512).Do(&Context{
 		Conn:   c2,
 		Logger: zap.NewExample(),
-	}, req)
+	}, req, nil)
 
 	res, err := http.ReadResponse(bufio.NewReader(c1), req)
 	require.NoError(err)

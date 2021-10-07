@@ -9,7 +9,7 @@ import (
 )
 
 func TestSinglePool(t *testing.T) {
-	p := NewSinglePool(worker.New(0, filter.FilterFunc(func(c *filter.Context) error {
+	p := NewSinglePool(worker.New(0, filter.FilterFunc(func(c *filter.Context, _ filter.Next) error {
 		return testutil.EchoReadWriter(c)
 	})))
 	p.Start()

@@ -10,7 +10,7 @@ import (
 
 func TestPreallocatedPool(t *testing.T) {
 	p := NewPreallocatedPool(func(num int) *worker.Worker {
-		return worker.New(num, filter.FilterFunc(func(c *filter.Context) error {
+		return worker.New(num, filter.FilterFunc(func(c *filter.Context, _ filter.Next) error {
 			return testutil.EchoReadWriter(c)
 		}))
 	}, 1)

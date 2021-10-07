@@ -4,7 +4,6 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/frizz925/higuchi/internal/errors"
 	"go.uber.org/zap"
 )
 
@@ -16,7 +15,7 @@ func NewForwardFilter(filters ...NetFilter) *ForwardFilter {
 	return &ForwardFilter{filters}
 }
 
-func (ff *ForwardFilter) Do(c *Context, req *http.Request) error {
+func (ff *ForwardFilter) Do(ctx *Context, req *http.Request, next Next) error {
 	hostport := req.Host
 	host, port, err := net.SplitHostPort(hostport)
 	if err != nil {
@@ -24,25 +23,20 @@ func (ff *ForwardFilter) Do(c *Context, req *http.Request) error {
 		port = "80"
 	}
 	addr := net.JoinHostPort(host, port)
-	c.Logger = c.Logger.With(zap.String("dst", addr))
-	for _, f := range ff.filters {
-		if err = f.Do(c, addr); err != nil {
-			break
+	ctx.Logger = ctx.Logger.With(zap.String("dst", addr))
+
+	var netNext Next
+	idx := 0
+	netNext = func() error {
+		if idx >= len(ff.filters) {
+			return next()
 		}
+		f := ff.filters[idx]
+		idx++
+		return f.Do(ctx, addr, netNext)
 	}
-	if err != nil {
-		he := &errors.HTTPError{
-			Err:         err.Error(),
-			Source:      c.RemoteAddr(),
-			Listener:    c.LocalAddr(),
-			Destination: addr,
-			Request:     req,
-			StatusCode:  http.StatusServiceUnavailable,
-		}
-		if req.URL != nil && req.URL.User != nil {
-			he.User = req.URL.User
-		}
-		return he
+	if err := netNext(); err != nil {
+		return ToHTTPError(ctx, req, err.Error(), http.StatusServiceUnavailable)
 	}
 	return nil
 }

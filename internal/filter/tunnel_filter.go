@@ -11,7 +11,6 @@ import (
 
 type TunnelFilter struct {
 	sbuf, dbuf []byte
-	filters    []HTTPFilter
 
 	fwTunnel *ForwardFilter
 	tunCh    chan net.Conn
@@ -20,14 +19,13 @@ type TunnelFilter struct {
 // Tunnel filter is a filter to intercept tunneling proxy request.
 // The filter has its own chain when intercepting a tunneling connection.
 // Otherwise, it would just use the provided chain instead.
-func NewTunnelFilter(bufsize int, filters ...HTTPFilter) *TunnelFilter {
+func NewTunnelFilter(bufsize int) *TunnelFilter {
 	tf := &TunnelFilter{
-		sbuf:    make([]byte, bufsize),
-		dbuf:    make([]byte, bufsize),
-		filters: filters,
-		tunCh:   make(chan net.Conn, 1),
+		sbuf:  make([]byte, bufsize),
+		dbuf:  make([]byte, bufsize),
+		tunCh: make(chan net.Conn, 1),
 	}
-	tf.fwTunnel = NewForwardFilter(NetFilterFunc(func(c *Context, addr string) error {
+	tf.fwTunnel = NewForwardFilter(NetFilterFunc(func(c *Context, addr string, _ Next) error {
 		out, err := net.Dial("tcp", addr)
 		if err != nil {
 			return err
@@ -38,21 +36,16 @@ func NewTunnelFilter(bufsize int, filters ...HTTPFilter) *TunnelFilter {
 	return tf
 }
 
-func (tf *TunnelFilter) Do(ctx *Context, req *http.Request) error {
+func (tf *TunnelFilter) Do(ctx *Context, req *http.Request, next Next) error {
 	if req.Method != http.MethodConnect {
-		for _, hf := range tf.filters {
-			if err := hf.Do(ctx, req); err != nil {
-				return err
-			}
-		}
-		return nil
+		return next()
 	}
 	// Remove the prefixed buffer if we're tunneling
 	if v, ok := ctx.Conn.(*netutil.PrefixedConn); ok {
 		ctx.Conn = v.Conn
 	}
 	// Use forward filter to parse the address and grab the established connection from the channel
-	if err := tf.fwTunnel.Do(ctx, req); err != nil {
+	if err := tf.fwTunnel.Do(ctx, req, nil); err != nil {
 		return err
 	}
 	ctx.Logger.Info("Established connection for tunneling")

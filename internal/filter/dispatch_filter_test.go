@@ -24,7 +24,7 @@ func TestDispatchFilter(t *testing.T) {
 		errCh <- df.Do(&Context{
 			Conn:   c2,
 			Logger: zap.NewExample(),
-		}, "")
+		}, "", nil)
 		close(errCh)
 	}()
 

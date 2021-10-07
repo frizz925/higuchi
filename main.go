@@ -33,7 +33,8 @@ func run() error {
 			df := filter.NewDispatchFilter(dispatcher.NewTCPDispatcher(server.DefaultBufferSize))
 			return worker.New(num, filter.NewParseFilter(
 				filter.NewAuthFilter(users),
-				filter.NewTunnelFilter(server.DefaultBufferSize, filter.NewForwardFilter(df)),
+				filter.NewTunnelFilter(server.DefaultBufferSize),
+				filter.NewForwardFilter(df),
 			))
 		}, 1024),
 	})
