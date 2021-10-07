@@ -8,6 +8,10 @@ import (
 	"go.uber.org/zap"
 )
 
+var NextNoop Next = func() error {
+	return nil
+}
+
 type Context struct {
 	net.Conn
 	Logger *zap.Logger
