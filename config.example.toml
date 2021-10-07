@@ -1,0 +1,21 @@
+[Server]
+Listeners = ["0.0.0.0:8080", "unix:/tmp/higuchi.sock"]
+
+[Pool]
+WorkerCount = 1024
+
+[Worker]
+BufferSize = 1024
+
+[Logger]
+Mode = "production"
+
+[Filters.Auth]
+Enabled = false
+PasswordsFile = ".htpasswd"
+Pepper = ""
+
+[Filters.Certbot]
+Enabled = false
+Hostname = "localhost"
+Webroot = "/opt/www"
