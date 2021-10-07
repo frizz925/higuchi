@@ -26,7 +26,7 @@ func TestAuthFilter(t *testing.T) {
 	authParam = base64.StdEncoding.EncodeToString([]byte(authParam))
 	header := make(http.Header)
 
-	af := NewAuthFilter(map[string]string{
+	af := NewAuthFilter(map[string]interface{}{
 		user: pass,
 	})
 

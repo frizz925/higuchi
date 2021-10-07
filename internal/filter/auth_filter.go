@@ -9,12 +9,25 @@ import (
 	"go.uber.org/zap"
 )
 
-type AuthFilter struct {
-	users map[string]string
+type AuthCompareFunc func(password string, v interface{}) bool
+
+var AuthCompareString = func(password string, v interface{}) bool {
+	switch v.(type) {
+	case string:
+		return password == v
+	default:
+		return false
+	}
 }
 
-func NewAuthFilter(users map[string]string) *AuthFilter {
-	return &AuthFilter{users}
+type AuthFilter struct {
+	users   map[string]interface{}
+	compare AuthCompareFunc
+}
+
+func NewAuthFilter(users map[string]interface{}, compare ...AuthCompareFunc) *AuthFilter {
+	cmp := AuthCompareString
+	return &AuthFilter{users, cmp}
 }
 
 func (af *AuthFilter) Do(c *Context, req *http.Request, next Next) error {
@@ -48,7 +61,7 @@ func (af *AuthFilter) Do(c *Context, req *http.Request, next Next) error {
 	c.Logger = c.Logger.With(zap.String("user", user))
 
 	v, ok := af.users[user]
-	if !ok || pass != v {
+	if !ok || !af.compare(pass, v) {
 		return ToHTTPError(c, req, "invalid credentials", http.StatusForbidden)
 	}
 	return next()
