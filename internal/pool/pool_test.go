@@ -18,6 +18,7 @@ func testPool(t *testing.T, p Pool) {
 		Conn:   c2,
 		Logger: zap.NewExample(),
 	}, func(ctx *filter.Context, err error) {
+		defer ctx.Close()
 		errCh <- err
 		close(errCh)
 	})
