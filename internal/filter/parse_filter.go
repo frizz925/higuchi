@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 
 	"github.com/frizz925/higuchi/internal/netutil"
 )
@@ -28,14 +29,24 @@ func (pf *ParseFilter) Do(ctx *Context, next Next) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Del("Proxy-Connection")
 	req.URL.Scheme = "http"
 	req.URL.Host = req.Host
+
+	oldHeader := req.Header
+	newHeader := make(http.Header)
+	for k, v := range oldHeader {
+		if strings.HasPrefix(k, "Proxy") {
+			continue
+		}
+		newHeader[k] = v
+	}
+	req.Header = newHeader
 
 	b, err := httputil.DumpRequestOut(req, true)
 	if err != nil {
 		return err
 	}
+	req.Header = oldHeader
 	ctx.Conn = netutil.NewPrefixedConn(ctx.Conn, b)
 
 	var httpNext Next

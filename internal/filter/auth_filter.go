@@ -22,7 +22,6 @@ func (af *AuthFilter) Do(c *Context, req *http.Request, next Next) error {
 	if auth == "" {
 		return ToHTTPError(c, req, "authorization required", http.StatusProxyAuthRequired)
 	}
-	req.Header.Del("Proxy-Authorization")
 
 	parts := strings.Split(auth, " ")
 	if len(parts) < 2 {
