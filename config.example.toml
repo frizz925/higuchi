@@ -8,7 +8,10 @@ WorkerCount = 1024
 BufferSize = 1024
 
 [Logger]
-Mode = "production"
+Mode = "development"
+Encoding = "console"
+DisableCaller = false
+DisableStackTrace = false
 
 [Filters.Auth]
 Enabled = false
@@ -19,3 +22,4 @@ Pepper = ""
 Enabled = false
 Hostname = "localhost"
 Webroot = "/opt/www"
+ChallengePath = "/.well-known/acme-challenge"

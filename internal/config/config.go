@@ -17,7 +17,10 @@ type Config struct {
 		BufferSize int
 	}
 	Logger struct {
-		Mode string
+		Mode              string
+		Encoding          string
+		DisableCaller     bool
+		DisableStackTrace bool
 	}
 	Filters struct {
 		Auth    Auth
@@ -32,9 +35,10 @@ type Auth struct {
 }
 
 type Certbot struct {
-	Enabled  bool
-	Hostname string
-	Webroot  string
+	Enabled       bool
+	Hostname      string
+	Webroot       string
+	ChallengePath string
 }
 
 func (a Auth) Pepper() ([]byte, error) {

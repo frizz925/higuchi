@@ -36,9 +36,8 @@ func runServe() error {
 	if err != nil {
 		return fmt.Errorf("error while reading config: %v", err)
 	}
-	cfa, cfc := cfg.Filters.Auth, cfg.Filters.Certbot
 
-	pepper, err := cfa.Pepper()
+	pepper, err := cfg.Filters.Auth.Pepper()
 	if err != nil {
 		return fmt.Errorf("error while decoding pepper: %v", err)
 	}
@@ -57,7 +56,7 @@ func runServe() error {
 	if cfg.Filters.Auth.Enabled {
 		h := hasher.NewArgon2Hasher(pepper)
 		aa := auth.NewArgon2Auth(h)
-		au, err := aa.ReadPasswordsFile(cfa.PasswordsFile)
+		au, err := aa.ReadPasswordsFile(cfg.Filters.Auth.PasswordsFile)
 		if err != nil {
 			return fmt.Errorf("error while reading passwords file: %v", err)
 		}
@@ -66,13 +65,24 @@ func runServe() error {
 		}
 	}
 
-	var logger *zap.Logger
+	var certbotConfig filter.CertbotConfig
+	if cfg.Filters.Certbot.Enabled {
+		certbotConfig.Hostname = cfg.Filters.Certbot.Hostname
+		certbotConfig.Webroot = cfg.Filters.Certbot.Webroot
+		certbotConfig.ChallengePath = cfg.Filters.Certbot.ChallengePath
+	}
+
+	var zc zap.Config
 	switch cfg.Logger.Mode {
 	case "production":
-		logger, err = zap.NewProduction()
+		zc = zap.NewProductionConfig()
 	default:
-		logger, err = zap.NewDevelopment()
+		zc = zap.NewDevelopmentConfig()
 	}
+	zc.Encoding = cfg.Logger.Encoding
+	zc.DisableCaller = cfg.Logger.DisableCaller
+	zc.DisableStacktrace = cfg.Logger.DisableStackTrace
+	logger, err := zc.Build()
 	if err != nil {
 		return err
 	}
@@ -83,7 +93,7 @@ func runServe() error {
 		Pool: pool.NewPreallocatedPool(func(num int) *worker.Worker {
 			hfs := make([]filter.HTTPFilter, 0)
 			if cfg.Filters.Certbot.Enabled {
-				hfs = append(hfs, filter.NewCertbotFilter(cfc.Hostname, cfc.Webroot))
+				hfs = append(hfs, filter.NewCertbotFilter(certbotConfig))
 			}
 			if cfg.Filters.Auth.Enabled {
 				hfs = append(hfs, filter.NewAuthFilter(users, authCompare))
