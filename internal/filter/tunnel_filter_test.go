@@ -39,10 +39,7 @@ func TestTunnelFilter(t *testing.T) {
 		},
 		Proto: "HTTP/1.1",
 	}
-	go NewTunnelFilter(512).Do(&Context{
-		Conn:   c2,
-		Logger: zap.NewExample(),
-	}, req, nil)
+	go NewTunnelFilter(512).Do(NewContext(c2, zap.NewExample()), req, nil)
 
 	res, err := http.ReadResponse(bufio.NewReader(c1), req)
 	require.NoError(err)

@@ -74,10 +74,7 @@ func (s *certbotFilterTestSuite) TestGet() {
 			return errors.New("unexpected next")
 		})
 		close(errCh)
-	}(&Context{
-		Conn:   c2,
-		Logger: zap.NewExample(),
-	}, req)
+	}(NewContext(c2, zap.NewExample()), req)
 
 	res, err := http.ReadResponse(bufio.NewReader(c1), req)
 	require.NoError(<-errCh)

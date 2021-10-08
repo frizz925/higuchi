@@ -31,10 +31,7 @@ func TestAuthFilter(t *testing.T) {
 	})
 
 	conn, _ := net.Pipe()
-	ctx := &Context{
-		Conn:   conn,
-		Logger: zap.NewExample(),
-	}
+	ctx := NewContext(conn, zap.NewExample())
 	require.Error(af.Do(ctx, &http.Request{Header: header}, NextNoop))
 	header.Set("Proxy-Authorization", "Basic ")
 	require.Error(af.Do(ctx, &http.Request{Header: header}, NextNoop))
@@ -44,4 +41,5 @@ func TestAuthFilter(t *testing.T) {
 	require.Error(af.Do(ctx, &http.Request{Header: header}, NextNoop))
 	header.Set("Proxy-Authorization", "Basic "+authParam)
 	require.NoError(af.Do(ctx, &http.Request{Header: header}, NextNoop))
+	require.Equal(user, ctx.LogFields.User)
 }
