@@ -125,7 +125,7 @@ func createAuthFilter(authCfg config.Auth) (*filter.AuthFilter, error) {
 		switch v := i.(type) {
 		case string:
 			return password == v
-		case *hasher.Argon2Digest:
+		case hasher.PasswordDigest:
 			return v.Compare(password) == 0
 		}
 		return false
