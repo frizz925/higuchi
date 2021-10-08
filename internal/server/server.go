@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"net"
+	"os"
 	"sync"
 
 	"github.com/frizz925/higuchi/internal/pool"
@@ -40,9 +41,23 @@ func (s *Server) Listen(network string, address string) (*Listener, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	isUnix := network == "unix"
+	if isUnix {
+		if _, err := os.Stat(address); os.IsExist(err) {
+			if err := os.Remove(address); err != nil {
+				return nil, err
+			}
+		}
+	}
 	l, err := net.Listen(network, address)
 	if err != nil {
 		return nil, err
+	}
+	if isUnix {
+		if err := os.Chmod(address, 0666); err != nil {
+			l.Close()
+			return nil, err
+		}
 	}
 
 	ls := &Listener{
