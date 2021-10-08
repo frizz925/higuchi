@@ -16,6 +16,7 @@ import (
 	"github.com/frizz925/higuchi/internal/server"
 	"github.com/frizz925/higuchi/internal/worker"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 const unixAddressPrefix = "unix:"
@@ -119,6 +120,8 @@ func runServe() error {
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	<-sigCh
+	sig := <-sigCh
+	logger.Info("Received stop signal", zap.String("signal", sig.String()))
+
 	return s.Close()
 }

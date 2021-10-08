@@ -8,6 +8,7 @@ import (
 )
 
 type LogFields struct {
+	Worker      int
 	Proto       string
 	Listener    string
 	Source      string
@@ -38,7 +39,8 @@ func NewContext(conn net.Conn, logger *zap.Logger, fields ...LogFields) *Context
 }
 
 func (c *Context) UpdateLogger() {
-	zf, lf := []zapcore.Field{}, c.LogFields
+	lf := c.LogFields
+	zf := []zapcore.Field{zap.Int("worker", lf.Worker)}
 	if lf.Proto != "" {
 		zf = append(zf, zap.String("proto", lf.Proto))
 	}
