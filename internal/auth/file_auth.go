@@ -10,17 +10,15 @@ import (
 	"github.com/frizz925/higuchi/internal/crypto/hasher"
 )
 
-type Argon2Users map[string]hasher.Argon2Digest
-
-type Argon2Auth struct {
-	hasher *hasher.Argon2Hasher
+type FileAuth struct {
+	hasher hasher.PasswordHasher
 }
 
-func NewArgon2Auth(h *hasher.Argon2Hasher) *Argon2Auth {
-	return &Argon2Auth{h}
+func NewFileAuth(h hasher.PasswordHasher) *FileAuth {
+	return &FileAuth{h}
 }
 
-func (a *Argon2Auth) ReadPasswordsFile(name string) (Argon2Users, error) {
+func (a *FileAuth) ReadPasswordsFile(name string) (Users, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return nil, err
@@ -28,7 +26,7 @@ func (a *Argon2Auth) ReadPasswordsFile(name string) (Argon2Users, error) {
 	defer f.Close()
 
 	rd := bufio.NewReaderSize(f, 1024)
-	users := make(Argon2Users)
+	users := make(Users)
 	for i := 0; ; i++ {
 		b, _, err := rd.ReadLine()
 		if err != nil {
@@ -50,16 +48,16 @@ func (a *Argon2Auth) ReadPasswordsFile(name string) (Argon2Users, error) {
 		}
 		users[user] = ad
 	}
-
 	return users, nil
 }
 
-func (a *Argon2Auth) WritePasswordsFile(name string, users Argon2Users) error {
+func (a *FileAuth) WritePasswordsFile(name string, users Users) error {
 	f, err := os.Create(name)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
 	bw := bufio.NewWriter(f)
 	for user, ad := range users {
 		line := fmt.Sprintf("%s:%s\r\n", user, ad.Digest())

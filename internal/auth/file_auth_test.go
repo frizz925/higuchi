@@ -7,17 +7,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestArgon2Auth(t *testing.T) {
+func TestFileAuth(t *testing.T) {
 	require := require.New(t)
 	password := "password"
-	tempFile := "/tmp/argon2_passwd.txt"
+	tempFile := "/tmp/auth_passwd.txt"
 
-	h := hasher.NewArgon2Hasher([]byte("pepper"))
-	ad, err := hasher.NewArgon2Digest(h, password)
+	h := hasher.NewMD5Hasher([]byte("pepper"))
+	ad, err := hasher.NewMD5Digest(h, password)
 	require.NoError(err)
 
-	aa := NewArgon2Auth(h)
-	require.NoError(aa.WritePasswordsFile(tempFile, Argon2Users{"user": ad}))
+	aa := NewFileAuth(h)
+	require.NoError(aa.WritePasswordsFile(tempFile, Users{"user": ad}))
 
 	users, err := aa.ReadPasswordsFile(tempFile)
 	require.NoError(err)
