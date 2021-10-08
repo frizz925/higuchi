@@ -13,22 +13,20 @@ const DefaultBufferSize = 512
 
 type ParseFilter struct {
 	filters []HTTPFilter
-	buffer  *bufio.Reader
 }
 
 func NewParseFilter(filters ...HTTPFilter) *ParseFilter {
 	return &ParseFilter{
 		filters: filters,
-		buffer:  bufio.NewReaderSize(nil, DefaultBufferSize),
 	}
 }
 
 func (pf *ParseFilter) Do(ctx *Context, next Next) error {
-	pf.buffer.Reset(ctx)
-	req, err := http.ReadRequest(pf.buffer)
+	req, err := http.ReadRequest(bufio.NewReaderSize(ctx, DefaultBufferSize))
 	if err != nil {
 		return err
 	}
+	defer req.Body.Close()
 	req.URL.Scheme = "http"
 	req.URL.Host = req.Host
 

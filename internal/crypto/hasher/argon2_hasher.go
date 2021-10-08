@@ -10,7 +10,9 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
-const PHCStringFormat = "$argon2id$v=%d$m=%d,t=%d,p=%d$%s"
+const Argon2StringFormat = "$argon2id$v=%d$m=%d,t=%d,p=%d$%s"
+
+var _ PasswordHasher = (*Argon2Hasher)(nil)
 
 type Argon2Hasher struct {
 	pepper []byte
@@ -74,6 +76,16 @@ func (h *Argon2Hasher) Hash(password string) (string, error) {
 	return h.format(hashed, salt, h.params), nil
 }
 
+func (h *Argon2Hasher) ParseDigest(digest string) (PasswordDigest, error) {
+	var err error
+	ad := Argon2Digest{
+		hasher: h,
+		digest: digest,
+	}
+	ad.hashed, ad.salt, ad.params, err = h.parse(digest)
+	return ad, err
+}
+
 func (h *Argon2Hasher) generateSalt() ([]byte, error) {
 	salt := make([]byte, h.params.SaltLength)
 	n, err := rand.Read(salt)
@@ -87,7 +99,7 @@ func (h *Argon2Hasher) format(hashed, salt []byte, params Argon2Params) string {
 	encsalt := base64.RawStdEncoding.EncodeToString(salt)
 	enchash := base64.RawStdEncoding.EncodeToString(hashed)
 	return fmt.Sprintf(
-		PHCStringFormat,
+		Argon2StringFormat,
 		argon2.Version, params.Memory, params.Time, params.Parallelism,
 		fmt.Sprintf("%s$%s", encsalt, enchash),
 	)
@@ -99,7 +111,7 @@ func (h *Argon2Hasher) parse(digest string) (hashed, salt []byte, params Argon2P
 		tail    string
 	)
 	_, err = fmt.Sscanf(
-		digest, PHCStringFormat,
+		digest, Argon2StringFormat,
 		&version, &params.Memory, &params.Time, &params.Parallelism, &tail,
 	)
 	if err != nil {

@@ -11,20 +11,18 @@ import (
 
 type HealthCheckFilter struct {
 	method, path string
-	br           *bufio.Reader
 }
 
 func NewHealthCheckFilter(method, path string) *HealthCheckFilter {
 	return &HealthCheckFilter{
 		method: method,
 		path:   path,
-		br:     bufio.NewReader(nil),
 	}
 }
 
 func (hcf *HealthCheckFilter) Do(ctx *Context, next Next) error {
-	hcf.br.Reset(ctx)
-	b, _, err := hcf.br.ReadLine()
+	rd := bufio.NewReader(ctx)
+	b, _, err := rd.ReadLine()
 	if err != nil {
 		return err
 	}
@@ -46,10 +44,10 @@ func (hcf *HealthCheckFilter) Do(ctx *Context, next Next) error {
 
 	if method != hcf.method || path != hcf.path {
 		b = append(b, '\r', '\n')
-		n := hcf.br.Buffered()
+		n := rd.Buffered()
 		if n > 0 {
 			p := make([]byte, n)
-			n, err := hcf.br.Read(p)
+			n, err := rd.Read(p)
 			if err != nil {
 				return err
 			}

@@ -3,8 +3,19 @@ package httputil
 import (
 	"bufio"
 	"bytes"
+	"net"
 	"net/http"
 )
+
+func ParseRequestAddress(req *http.Request) string {
+	hostport := req.Host
+	host, port, err := net.SplitHostPort(hostport)
+	if err != nil {
+		host = hostport
+		port = "80"
+	}
+	return net.JoinHostPort(host, port)
+}
 
 func ParseRequestHeader(br *bufio.Reader) (req *http.Request, err error) {
 	var (

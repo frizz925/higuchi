@@ -21,15 +21,9 @@ func NewArgon2Digest(h *Argon2Hasher, password string) (ad Argon2Digest, err err
 	return
 }
 
-func (h *Argon2Hasher) ParseDigest(digest string) (ad Argon2Digest, err error) {
-	ad.hasher, ad.digest = h, digest
-	ad.hashed, ad.salt, ad.params, err = h.parse(digest)
-	return
-}
-
 func (ad Argon2Digest) Compare(password string) int {
 	hashed := ad.hasher.hash(password, ad.salt, ad.params)
-	return bytes.Compare(hashed, ad.hashed)
+	return bytes.Compare(ad.hashed, hashed)
 }
 
 func (ad Argon2Digest) Digest() string {

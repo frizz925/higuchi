@@ -1,8 +1,9 @@
 package filter
 
 import (
-	"net"
 	"net/http"
+
+	"github.com/frizz925/higuchi/internal/httputil"
 )
 
 type ForwardFilter struct {
@@ -14,13 +15,7 @@ func NewForwardFilter(filters ...NetFilter) *ForwardFilter {
 }
 
 func (ff *ForwardFilter) Do(ctx *Context, req *http.Request, next Next) error {
-	hostport := req.Host
-	host, port, err := net.SplitHostPort(hostport)
-	if err != nil {
-		host = hostport
-		port = "80"
-	}
-	addr := net.JoinHostPort(host, port)
+	addr := httputil.ParseRequestAddress(req)
 	ctx.LogFields.Destination = addr
 	ctx.UpdateLogger()
 
