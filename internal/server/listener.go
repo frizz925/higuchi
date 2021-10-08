@@ -78,6 +78,7 @@ func (l *Listener) connCallback(c *filter.Context, err error) {
 			res.ProtoMajor = v.Request.ProtoMajor
 			res.ProtoMinor = v.Request.ProtoMinor
 			res.StatusCode = v.StatusCode
+			res.Header = v.Header
 			c.Logger.Error("Proxy error", zap.Error(err))
 		} else {
 			res.StatusCode = http.StatusInternalServerError

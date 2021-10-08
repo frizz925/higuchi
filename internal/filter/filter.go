@@ -32,6 +32,7 @@ func ToHTTPError(ctx *Context, req *http.Request, err string, code int) *errors.
 		Destination: req.Host,
 		Request:     req,
 		StatusCode:  code,
+		Header:      http.Header{},
 	}
 	if req.URL != nil && req.URL.User != nil {
 		e.User = req.URL.User

@@ -34,7 +34,9 @@ func NewAuthFilter(users map[string]interface{}, compare ...AuthCompareFunc) *Au
 func (af *AuthFilter) Do(ctx *Context, req *http.Request, next Next) error {
 	auth := req.Header.Get("Proxy-Authorization")
 	if auth == "" {
-		return ToHTTPError(ctx, req, "authorization required", http.StatusProxyAuthRequired)
+		he := ToHTTPError(ctx, req, "authorization required", http.StatusProxyAuthRequired)
+		he.Header.Set("Proxy-Authenticate", "Basic realm=\"Higuchi web proxy\"")
+		return he
 	}
 
 	parts := strings.Split(auth, " ")

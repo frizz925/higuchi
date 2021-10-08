@@ -14,6 +14,7 @@ type HTTPError struct {
 	Destination string
 	Request     *http.Request
 	StatusCode  int
+	Header      http.Header
 }
 
 func (e *HTTPError) Error() string {
