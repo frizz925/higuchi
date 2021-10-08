@@ -2,9 +2,11 @@ package config
 
 import (
 	"encoding/base64"
+	"os"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type Config struct {
@@ -68,18 +70,40 @@ func ReadConfig() (cfg Config, err error) {
 	return
 }
 
-func (l Logger) Create() (*zap.Logger, error) {
-	var zc zap.Config
+func (l Logger) Create() *zap.Logger {
+	var cfg zapcore.EncoderConfig
 	switch l.Mode {
 	case "production":
-		zc = zap.NewProductionConfig()
+		cfg = zap.NewProductionEncoderConfig()
 	default:
-		zc = zap.NewDevelopmentConfig()
+		cfg = zap.NewDevelopmentEncoderConfig()
 	}
-	zc.Encoding = l.Encoding
-	zc.DisableCaller = l.DisableCaller
-	zc.DisableStacktrace = l.DisableStackTrace
-	return zc.Build()
+
+	var zenc zapcore.Encoder
+	switch l.Encoding {
+	case "console":
+		zenc = zapcore.NewConsoleEncoder(cfg)
+	default:
+		zenc = zapcore.NewJSONEncoder(cfg)
+	}
+
+	lvlEnablerInfo := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		if l.Mode == "development" {
+			return lvl <= zapcore.InfoLevel
+		}
+		return lvl == zapcore.InfoLevel
+	})
+	lvlEnablerErr := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		return lvl >= zapcore.WarnLevel
+	})
+
+	stdout := zapcore.Lock(os.Stdout)
+	stderr := zapcore.Lock(os.Stderr)
+	core := zapcore.NewTee(
+		zapcore.NewCore(zenc, stdout, lvlEnablerInfo),
+		zapcore.NewCore(zenc, stderr, lvlEnablerErr),
+	)
+	return zap.New(core)
 }
 
 func (a Auth) Pepper() ([]byte, error) {

@@ -35,6 +35,8 @@ func runServe() error {
 	if err != nil {
 		return fmt.Errorf("error while reading config: %v", err)
 	}
+	logger := cfg.Logger.Create()
+	defer logger.Sync()
 
 	pepper, err := cfg.Filters.Auth.Pepper()
 	if err != nil {
@@ -70,12 +72,6 @@ func runServe() error {
 		certbotConfig.Webroot = cfg.Filters.Certbot.Webroot
 		certbotConfig.ChallengePath = cfg.Filters.Certbot.ChallengePath
 	}
-
-	logger, err := cfg.Logger.Create()
-	if err != nil {
-		return err
-	}
-	defer logger.Sync()
 
 	s := server.New(server.Config{
 		Logger: logger,
