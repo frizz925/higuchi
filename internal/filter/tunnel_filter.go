@@ -39,8 +39,12 @@ func (tf *TunnelFilter) Do(ctx *Context, req *http.Request, next Next) error {
 	if req.Method != http.MethodConnect {
 		return next()
 	}
+	addr := httputil.ParseRequestAddress(req)
+	ctx.LogFields.Destination = addr
+	ctx.UpdateLogger()
+
 	// Create the connection to target host
-	conn, err := net.Dial("tcp", httputil.ParseRequestAddress(req))
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return err
 	}
