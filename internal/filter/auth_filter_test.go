@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"testing"
 
+	hgErrors "github.com/frizz925/higuchi/internal/errors"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -26,22 +27,28 @@ func TestAuthFilter(t *testing.T) {
 	authParam = base64.StdEncoding.EncodeToString([]byte(authParam))
 	header := make(http.Header)
 
-	af := NewAuthFilter(map[string]string{
+	af := NewAuthFilter(map[string]interface{}{
 		user: pass,
 	})
 
 	conn, _ := net.Pipe()
-	ctx := &Context{
-		Conn:   conn,
-		Logger: zap.NewExample(),
-	}
-	require.Error(af.Do(ctx, &http.Request{Header: header}, NextNoop))
+	ctx := NewContext(conn, zap.NewExample())
+	err = af.Do(ctx, &http.Request{Header: header}, NextNoop)
+	require.Error(err)
+	require.IsType(&hgErrors.HTTPError{}, err)
+	require.Equal(
+		"Basic realm=\"Higuchi web proxy\"",
+		err.(*hgErrors.HTTPError).Header.Get("Proxy-Authenticate"),
+	)
+
 	header.Set("Proxy-Authorization", "Basic ")
 	require.Error(af.Do(ctx, &http.Request{Header: header}, NextNoop))
 	header.Set("Proxy-Authorization", "Basic userpass")
 	require.Error(af.Do(ctx, &http.Request{Header: header}, NextNoop))
 	header.Set("Proxy-Authorization", "Basic aGVsbG8K")
 	require.Error(af.Do(ctx, &http.Request{Header: header}, NextNoop))
+
 	header.Set("Proxy-Authorization", "Basic "+authParam)
 	require.NoError(af.Do(ctx, &http.Request{Header: header}, NextNoop))
+	require.Equal(user, ctx.LogFields.User)
 }

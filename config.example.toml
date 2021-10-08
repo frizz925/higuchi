@@ -1,0 +1,33 @@
+[Server]
+Listeners = ["0.0.0.0:8080", "unix:/tmp/higuchi.sock"]
+
+[Pool]
+WorkerCount = 1024
+
+[Worker]
+BufferSize = 1024
+
+[Logger]
+Mode = "development"
+Encoding = "console"
+DisableCaller = false
+DisableStackTrace = false
+
+[Filters.Auth]
+Enabled = false
+PasswordsFile = ".htpasswd"
+Pepper = ""
+
+[Filters.Certbot]
+Enabled = false
+Hostname = "localhost"
+Webroot = "/opt/www"
+ChallengePath = "/.well-known/acme-challenge"
+
+[Filters.Forwarded]
+Enabled = false
+
+[Filters.Healthcheck]
+Enabled = false
+Method = "OPTIONS"
+Path = "/healthz"

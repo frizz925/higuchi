@@ -6,21 +6,26 @@ import (
 	"strings"
 
 	"github.com/frizz925/higuchi/internal/httputil"
+	"go.uber.org/zap"
 )
 
-const AcmeChallengePath = "/.well-known/acme-challenge"
-
-var AcmeChallengePathLength = len(AcmeChallengePath)
-
 type CertbotFilter struct {
-	hostname string
-	handler  http.Handler
+	hostname      string
+	challengePath string
+	handler       http.Handler
 }
 
-func NewCertbotFilter(hostname, webroot string) *CertbotFilter {
+type CertbotConfig struct {
+	Hostname      string
+	Webroot       string
+	ChallengePath string
+}
+
+func NewCertbotFilter(cfg CertbotConfig) *CertbotFilter {
 	return &CertbotFilter{
-		hostname: hostname,
-		handler:  http.FileServer(http.Dir(webroot)),
+		hostname:      cfg.Hostname,
+		challengePath: cfg.ChallengePath,
+		handler:       http.FileServer(http.Dir(cfg.Webroot)),
 	}
 }
 
@@ -28,7 +33,7 @@ func (cf *CertbotFilter) Do(ctx *Context, req *http.Request, next Next) error {
 	if !cf.checkRequest(req) {
 		return next()
 	}
-	req.URL.Path = req.URL.Path[AcmeChallengePathLength+1:]
+	ctx.Logger.Info("Captured certbot challenge request", zap.String("path", req.URL.Path))
 	cw := httputil.NewResponseWriter(ctx, req)
 	cf.handler.ServeHTTP(cw, req)
 	return cw.Close()
@@ -40,5 +45,5 @@ func (cf *CertbotFilter) checkRequest(req *http.Request) bool {
 	if err != nil {
 		host = hostport
 	}
-	return req.Method == http.MethodGet && host == cf.hostname && strings.HasPrefix(req.URL.Path, AcmeChallengePath)
+	return req.Method == http.MethodGet && host == cf.hostname && strings.HasPrefix(req.URL.Path, cf.challengePath)
 }

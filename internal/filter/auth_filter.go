@@ -5,39 +5,55 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
-	"go.uber.org/zap"
 )
 
+type AuthCompareFunc func(password string, v interface{}) bool
+
+var AuthCompareString = func(password string, v interface{}) bool {
+	switch v.(type) {
+	case string:
+		return password == v
+	default:
+		return false
+	}
+}
+
 type AuthFilter struct {
-	users map[string]string
+	users   map[string]interface{}
+	compare AuthCompareFunc
 }
 
-func NewAuthFilter(users map[string]string) *AuthFilter {
-	return &AuthFilter{users}
+func NewAuthFilter(users map[string]interface{}, compare ...AuthCompareFunc) *AuthFilter {
+	cmp := AuthCompareString
+	if len(compare) > 0 {
+		cmp = compare[0]
+	}
+	return &AuthFilter{users, cmp}
 }
 
-func (af *AuthFilter) Do(c *Context, req *http.Request, next Next) error {
+func (af *AuthFilter) Do(ctx *Context, req *http.Request, next Next) error {
 	auth := req.Header.Get("Proxy-Authorization")
 	if auth == "" {
-		return ToHTTPError(c, req, "authorization required", http.StatusProxyAuthRequired)
+		he := ToHTTPError(ctx, req, "authorization required", http.StatusProxyAuthRequired)
+		he.Header.Set("Proxy-Authenticate", "Basic realm=\"Higuchi web proxy\"")
+		return he
 	}
 
 	parts := strings.Split(auth, " ")
 	if len(parts) < 2 {
-		return ToHTTPError(c, req, "malformed authorization value", http.StatusBadRequest)
+		return ToHTTPError(ctx, req, "malformed authorization value", http.StatusBadRequest)
 	}
 	scheme, param := parts[0], parts[1]
 	if scheme != "Basic" {
-		return ToHTTPError(c, req, "unsupported authorization scheme", http.StatusBadRequest)
+		return ToHTTPError(ctx, req, "unsupported authorization scheme", http.StatusBadRequest)
 	}
 	b, err := base64.StdEncoding.DecodeString(param)
 	if err != nil {
-		return ToHTTPError(c, req, "malformed authorization value", http.StatusBadRequest)
+		return ToHTTPError(ctx, req, "malformed authorization value", http.StatusBadRequest)
 	}
 	creds := strings.Split(string(b), ":")
 	if len(creds) < 2 {
-		return ToHTTPError(c, req, "malformed authorization param", http.StatusBadRequest)
+		return ToHTTPError(ctx, req, "malformed authorization param", http.StatusBadRequest)
 	}
 
 	user, pass := creds[0], creds[1]
@@ -45,11 +61,13 @@ func (af *AuthFilter) Do(c *Context, req *http.Request, next Next) error {
 		req.URL = &url.URL{}
 	}
 	req.URL.User = url.UserPassword(user, pass)
-	c.Logger = c.Logger.With(zap.String("user", user))
+	ctx.LogFields.User = user
+	ctx.UpdateLogger()
 
 	v, ok := af.users[user]
-	if !ok || pass != v {
-		return ToHTTPError(c, req, "invalid credentials", http.StatusForbidden)
+	if !ok || !af.compare(pass, v) {
+		return ToHTTPError(ctx, req, "invalid credentials", http.StatusForbidden)
 	}
+	ctx.Logger.Info("Authorized user")
 	return next()
 }

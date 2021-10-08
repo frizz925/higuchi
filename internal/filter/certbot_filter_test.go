@@ -18,41 +18,48 @@ import (
 
 type certbotFilterTestSuite struct {
 	suite.Suite
-	hostname string
-	webroot  string
-	filename string
-	expected []byte
+	hostname      string
+	webroot       string
+	challengePath string
+	filename      string
+	expected      []byte
 }
 
 func TestCertbotFilter(t *testing.T) {
 	suite.Run(t, &certbotFilterTestSuite{
-		hostname: "certbot-test",
-		webroot:  "/tmp/certbot-filter-test",
-		filename: "certbot-test.txt",
-		expected: []byte("expected"),
+		hostname:      "certbot-test",
+		webroot:       "/tmp",
+		challengePath: "/certbot-filter-test",
+		filename:      "certbot-test.txt",
+		expected:      []byte("expected"),
 	})
 }
 
 func (s *certbotFilterTestSuite) SetupTest() {
 	require := s.Require()
-	_, err := os.Stat(s.webroot)
+	dir := path.Join(s.webroot, s.challengePath)
+	_, err := os.Stat(dir)
 	if os.IsNotExist(err) {
-		require.NoError(os.Mkdir(s.webroot, 0755))
+		require.NoError(os.MkdirAll(dir, 0755))
 	}
-	fn := path.Join(s.webroot, s.filename)
+	fn := path.Join(dir, s.filename)
 	require.NoError(os.WriteFile(fn, s.expected, 0644))
 }
 
 func (s *certbotFilterTestSuite) TestGet() {
 	require := s.Require()
-	cf := NewCertbotFilter(s.hostname, s.webroot)
+	cf := NewCertbotFilter(CertbotConfig{
+		Hostname:      s.hostname,
+		Webroot:       s.webroot,
+		ChallengePath: s.challengePath,
+	})
 	host := fmt.Sprintf("%s:80", s.hostname)
 	req := &http.Request{
 		Method: http.MethodGet,
 		URL: &url.URL{
 			Scheme: "http",
 			Host:   host,
-			Path:   path.Join(AcmeChallengePath, s.filename),
+			Path:   path.Join(s.challengePath, s.filename),
 		},
 		Host: host,
 	}
@@ -67,10 +74,7 @@ func (s *certbotFilterTestSuite) TestGet() {
 			return errors.New("unexpected next")
 		})
 		close(errCh)
-	}(&Context{
-		Conn:   c2,
-		Logger: zap.NewExample(),
-	}, req)
+	}(NewContext(c2, zap.NewExample()), req)
 
 	res, err := http.ReadResponse(bufio.NewReader(c1), req)
 	require.NoError(<-errCh)

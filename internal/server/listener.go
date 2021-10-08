@@ -49,22 +49,24 @@ func (l *Listener) stop() error {
 
 func (l *Listener) runRoutine() {
 	defer l.wg.Done()
+	laddr := l.Addr().String()
 	for l.running.Load() {
 		conn, err := l.Accept()
 		if err != nil {
 			return
 		}
-		logger := l.logger.With(zap.String("src", conn.RemoteAddr().String()))
-		logger.Info("Accepted connection")
-		l.pool.Dispatch(&filter.Context{
-			Conn:   conn,
-			Logger: logger,
-		}, l.connCallback)
+		raddr := conn.RemoteAddr().String()
+		ctx := filter.NewContext(conn, l.logger, filter.LogFields{
+			Proto:    "http",
+			Listener: laddr,
+			Source:   raddr,
+		})
+		ctx.Logger.Info("Accepted connection")
+		l.pool.Dispatch(ctx, l.connCallback)
 	}
 }
 
 func (l *Listener) connCallback(c *filter.Context, err error) {
-	logger := c.Logger
 	if err != nil {
 		res := &http.Response{
 			Proto:      "HTTP/1.1",
@@ -76,18 +78,19 @@ func (l *Listener) connCallback(c *filter.Context, err error) {
 			res.ProtoMajor = v.Request.ProtoMajor
 			res.ProtoMinor = v.Request.ProtoMinor
 			res.StatusCode = v.StatusCode
-			logger.Error("Proxy error", zap.Error(err))
+			res.Header = v.Header
+			c.Logger.Error("Proxy error", zap.Error(err))
 		} else {
 			res.StatusCode = http.StatusInternalServerError
-			logger.Error("Connection error", zap.Error(err))
+			c.Logger.Error("Connection error", zap.Error(err))
 		}
 		bw := bufio.NewWriter(c)
 		httputil.WriteResponseHeader(res, bw)
 		if err := bw.Flush(); err != nil {
-			logger.Error("Failed writing response", zap.Error(err))
+			c.Logger.Error("Failed writing response", zap.Error(err))
 		}
 	}
 	if err := c.Close(); err != nil {
-		logger.Error("Close connection error", zap.Error(err))
+		c.Logger.Error("Close connection error", zap.Error(err))
 	}
 }

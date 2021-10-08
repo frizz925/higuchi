@@ -19,13 +19,11 @@ func TestForwardFilter(t *testing.T) {
 	c1, c2 := net.Pipe()
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- ff.Do(&Context{
-			Conn:   c2,
-			Logger: zap.NewExample(),
-		}, &http.Request{
-			Method: http.MethodGet,
-			Host:   "localhost",
-		}, nil)
+		errCh <- ff.Do(
+			NewContext(c2, zap.NewExample()),
+			&http.Request{Method: http.MethodGet, Host: "localhost"},
+			nil,
+		)
 		close(errCh)
 	}()
 

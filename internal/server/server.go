@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"net"
+	"os"
 	"sync"
 
 	"github.com/frizz925/higuchi/internal/pool"
@@ -40,15 +41,27 @@ func (s *Server) Listen(network string, address string) (*Listener, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	isUnix := network == "unix"
+	if isUnix {
+		if err := s.maybeRemoveUnixSocket(address); err != nil {
+			return nil, err
+		}
+	}
 	l, err := net.Listen(network, address)
 	if err != nil {
 		return nil, err
+	}
+	if isUnix {
+		if err := s.fixUnixSocketPermissions(address); err != nil {
+			l.Close()
+			return nil, err
+		}
 	}
 
 	ls := &Listener{
 		Listener:       l,
 		pool:           s.pool,
-		logger:         s.logger.With(zap.String("listener", l.Addr().String())),
+		logger:         s.logger,
 		removeListener: s.removeListener,
 	}
 	ls.start()
@@ -66,6 +79,17 @@ func (s *Server) Close() error {
 		delete(s.listeners, l)
 	}
 	return nil
+}
+
+func (s *Server) maybeRemoveUnixSocket(name string) error {
+	if _, err := os.Stat(name); os.IsNotExist(err) {
+		return nil
+	}
+	return os.Remove(name)
+}
+
+func (s *Server) fixUnixSocketPermissions(name string) error {
+	return os.Chmod(name, 0666)
 }
 
 func (s *Server) removeListener(l *Listener) {
