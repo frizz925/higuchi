@@ -2,17 +2,20 @@ package filter
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 )
 
-type AuthCompareFunc func(password string, v interface{}) bool
+type AuthCompareFunc func(password string, i interface{}) bool
 
-var AuthCompareString = func(password string, v interface{}) bool {
-	switch v.(type) {
+var AuthCompareString = func(password string, i interface{}) bool {
+	switch v := i.(type) {
 	case string:
 		return password == v
+	case fmt.Stringer:
+		return password == v.String()
 	default:
 		return false
 	}

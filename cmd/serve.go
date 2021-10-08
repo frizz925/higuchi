@@ -122,9 +122,10 @@ func createAuthFilter(authCfg config.Auth) (*filter.AuthFilter, error) {
 		users[user] = ad
 	}
 	return filter.NewAuthFilter(users, func(password string, i interface{}) bool {
+		if filter.AuthCompareString(password, i) {
+			return true
+		}
 		switch v := i.(type) {
-		case string:
-			return password == v
 		case hasher.PasswordDigest:
 			return v.Compare(password) == 0
 		}
