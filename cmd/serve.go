@@ -16,7 +16,6 @@ import (
 	"github.com/frizz925/higuchi/internal/server"
 	"github.com/frizz925/higuchi/internal/worker"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 const unixAddressPrefix = "unix:"
@@ -72,17 +71,7 @@ func runServe() error {
 		certbotConfig.ChallengePath = cfg.Filters.Certbot.ChallengePath
 	}
 
-	var zc zap.Config
-	switch cfg.Logger.Mode {
-	case "production":
-		zc = zap.NewProductionConfig()
-	default:
-		zc = zap.NewDevelopmentConfig()
-	}
-	zc.Encoding = cfg.Logger.Encoding
-	zc.DisableCaller = cfg.Logger.DisableCaller
-	zc.DisableStacktrace = cfg.Logger.DisableStackTrace
-	logger, err := zc.Build()
+	logger, err := cfg.Logger.Create()
 	if err != nil {
 		return err
 	}

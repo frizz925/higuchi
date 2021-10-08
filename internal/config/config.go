@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -16,18 +17,20 @@ type Config struct {
 	Worker struct {
 		BufferSize int
 	}
-	Logger struct {
-		Mode              string
-		Encoding          string
-		DisableCaller     bool
-		DisableStackTrace bool
-	}
+	Logger  Logger
 	Filters struct {
 		Auth        Auth
 		Certbot     Certbot
 		Forwarded   Forwarded
 		Healthcheck Healthcheck
 	}
+}
+
+type Logger struct {
+	Mode              string
+	Encoding          string
+	DisableCaller     bool
+	DisableStackTrace bool
 }
 
 type Auth struct {
@@ -53,10 +56,6 @@ type Healthcheck struct {
 	Path    string
 }
 
-func (a Auth) Pepper() ([]byte, error) {
-	return base64.StdEncoding.DecodeString(a.pepper)
-}
-
 func ReadConfig() (cfg Config, err error) {
 	viper.AddConfigPath(".")
 	viper.SetConfigName("config")
@@ -67,4 +66,22 @@ func ReadConfig() (cfg Config, err error) {
 		return
 	}
 	return
+}
+
+func (l Logger) Create() (*zap.Logger, error) {
+	var zc zap.Config
+	switch l.Mode {
+	case "production":
+		zc = zap.NewProductionConfig()
+	default:
+		zc = zap.NewDevelopmentConfig()
+	}
+	zc.Encoding = l.Encoding
+	zc.DisableCaller = l.DisableCaller
+	zc.DisableStacktrace = l.DisableStackTrace
+	return zc.Build()
+}
+
+func (a Auth) Pepper() ([]byte, error) {
+	return base64.StdEncoding.DecodeString(a.pepper)
 }
