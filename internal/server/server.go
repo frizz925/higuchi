@@ -43,10 +43,8 @@ func (s *Server) Listen(network string, address string) (*Listener, error) {
 
 	isUnix := network == "unix"
 	if isUnix {
-		if _, err := os.Stat(address); os.IsExist(err) {
-			if err := os.Remove(address); err != nil {
-				return nil, err
-			}
+		if err := s.maybeRemoveUnixSocket(address); err != nil {
+			return nil, err
 		}
 	}
 	l, err := net.Listen(network, address)
@@ -54,7 +52,7 @@ func (s *Server) Listen(network string, address string) (*Listener, error) {
 		return nil, err
 	}
 	if isUnix {
-		if err := os.Chmod(address, 0666); err != nil {
+		if err := s.fixUnixSocketPermissions(address); err != nil {
 			l.Close()
 			return nil, err
 		}
@@ -81,6 +79,17 @@ func (s *Server) Close() error {
 		delete(s.listeners, l)
 	}
 	return nil
+}
+
+func (s *Server) maybeRemoveUnixSocket(name string) error {
+	if _, err := os.Stat(name); os.IsNotExist(err) {
+		return nil
+	}
+	return os.Remove(name)
+}
+
+func (s *Server) fixUnixSocketPermissions(name string) error {
+	return os.Chmod(name, 0666)
 }
 
 func (s *Server) removeListener(l *Listener) {
