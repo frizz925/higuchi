@@ -38,3 +38,9 @@ func ToHTTPError(ctx *Context, req *http.Request, err string, code int) *errors.
 	}
 	return e
 }
+
+func NextError(err error) Next {
+	return func() error {
+		return err
+	}
+}
