@@ -63,7 +63,7 @@ func (s *Server) Listen(network string, address string) (*Listener, error) {
 	ls := &Listener{
 		Listener:       l,
 		pool:           s.pool,
-		logger:         s.logger.With(zap.String("listener", l.Addr().String())),
+		logger:         s.logger,
 		removeListener: s.removeListener,
 	}
 	ls.start()

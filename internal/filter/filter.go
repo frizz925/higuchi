@@ -1,20 +1,13 @@
 package filter
 
 import (
-	"net"
 	"net/http"
 
 	"github.com/frizz925/higuchi/internal/errors"
-	"go.uber.org/zap"
 )
 
 var NextNoop Next = func() error {
 	return nil
-}
-
-type Context struct {
-	net.Conn
-	Logger *zap.Logger
 }
 
 type Next func() error

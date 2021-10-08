@@ -91,7 +91,7 @@ func runServe() error {
 	s := server.New(server.Config{
 		Logger: logger,
 		Pool: pool.NewPreallocatedPool(func(num int) *worker.Worker {
-			hfs := make([]filter.HTTPFilter, 0)
+			hfs := []filter.HTTPFilter{filter.DefaultForwardedFilter}
 			if cfg.Filters.Certbot.Enabled {
 				hfs = append(hfs, filter.NewCertbotFilter(certbotConfig))
 			}

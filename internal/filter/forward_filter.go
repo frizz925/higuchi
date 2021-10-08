@@ -3,8 +3,6 @@ package filter
 import (
 	"net"
 	"net/http"
-
-	"go.uber.org/zap"
 )
 
 type ForwardFilter struct {
@@ -23,7 +21,8 @@ func (ff *ForwardFilter) Do(ctx *Context, req *http.Request, next Next) error {
 		port = "80"
 	}
 	addr := net.JoinHostPort(host, port)
-	ctx.Logger = ctx.Logger.With(zap.String("dst", addr))
+	ctx.LogFields.Destination = addr
+	ctx.UpdateLogger()
 
 	var netNext Next
 	idx := 0

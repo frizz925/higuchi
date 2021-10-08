@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
-	"go.uber.org/zap"
 )
 
 type AuthCompareFunc func(password string, v interface{}) bool
@@ -33,27 +31,27 @@ func NewAuthFilter(users map[string]interface{}, compare ...AuthCompareFunc) *Au
 	return &AuthFilter{users, cmp}
 }
 
-func (af *AuthFilter) Do(c *Context, req *http.Request, next Next) error {
+func (af *AuthFilter) Do(ctx *Context, req *http.Request, next Next) error {
 	auth := req.Header.Get("Proxy-Authorization")
 	if auth == "" {
-		return ToHTTPError(c, req, "authorization required", http.StatusProxyAuthRequired)
+		return ToHTTPError(ctx, req, "authorization required", http.StatusProxyAuthRequired)
 	}
 
 	parts := strings.Split(auth, " ")
 	if len(parts) < 2 {
-		return ToHTTPError(c, req, "malformed authorization value", http.StatusBadRequest)
+		return ToHTTPError(ctx, req, "malformed authorization value", http.StatusBadRequest)
 	}
 	scheme, param := parts[0], parts[1]
 	if scheme != "Basic" {
-		return ToHTTPError(c, req, "unsupported authorization scheme", http.StatusBadRequest)
+		return ToHTTPError(ctx, req, "unsupported authorization scheme", http.StatusBadRequest)
 	}
 	b, err := base64.StdEncoding.DecodeString(param)
 	if err != nil {
-		return ToHTTPError(c, req, "malformed authorization value", http.StatusBadRequest)
+		return ToHTTPError(ctx, req, "malformed authorization value", http.StatusBadRequest)
 	}
 	creds := strings.Split(string(b), ":")
 	if len(creds) < 2 {
-		return ToHTTPError(c, req, "malformed authorization param", http.StatusBadRequest)
+		return ToHTTPError(ctx, req, "malformed authorization param", http.StatusBadRequest)
 	}
 
 	user, pass := creds[0], creds[1]
@@ -61,12 +59,13 @@ func (af *AuthFilter) Do(c *Context, req *http.Request, next Next) error {
 		req.URL = &url.URL{}
 	}
 	req.URL.User = url.UserPassword(user, pass)
-	c.Logger = c.Logger.With(zap.String("user", user))
+	ctx.LogFields.User = user
+	ctx.UpdateLogger()
 
 	v, ok := af.users[user]
 	if !ok || !af.compare(pass, v) {
-		return ToHTTPError(c, req, "invalid credentials", http.StatusForbidden)
+		return ToHTTPError(ctx, req, "invalid credentials", http.StatusForbidden)
 	}
-	c.Logger.Info("Authorized user")
+	ctx.Logger.Info("Authorized user")
 	return next()
 }
