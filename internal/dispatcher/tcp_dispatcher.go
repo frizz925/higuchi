@@ -3,19 +3,24 @@ package dispatcher
 import (
 	"io"
 	"net"
+	"sync"
 
 	"github.com/frizz925/higuchi/internal/ioutil"
 )
 
 type TCPDispatcher struct {
-	sbuf, dbuf []byte
+	ioPool sync.Pool
 }
 
 func NewTCPDispatcher(bufsize int) *TCPDispatcher {
-	return &TCPDispatcher{
-		sbuf: make([]byte, bufsize),
-		dbuf: make([]byte, bufsize),
+	d := &TCPDispatcher{}
+	d.ioPool.New = func() interface{} {
+		return &ioBuffer{
+			sbuf: make([]byte, bufsize),
+			dbuf: make([]byte, bufsize),
+		}
 	}
+	return d
 }
 
 func (d *TCPDispatcher) Dispatch(rw io.ReadWriter, addr string) error {
@@ -24,5 +29,7 @@ func (d *TCPDispatcher) Dispatch(rw io.ReadWriter, addr string) error {
 		return err
 	}
 	defer out.Close()
-	return ioutil.PipeBuffer(rw, out, d.sbuf, d.dbuf)
+	iob := d.ioPool.Get().(*ioBuffer)
+	defer d.ioPool.Put(iob)
+	return ioutil.PipeBuffer(rw, out, iob.sbuf, iob.dbuf)
 }
