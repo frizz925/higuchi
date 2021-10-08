@@ -91,7 +91,16 @@ func runServe() error {
 	s := server.New(server.Config{
 		Logger: logger,
 		Pool: pool.NewPreallocatedPool(func(num int) *worker.Worker {
-			hfs := []filter.HTTPFilter{filter.DefaultForwardedFilter}
+			hfs := []filter.HTTPFilter{}
+			if cfg.Filters.Forwarded.Enabled {
+				hfs = append(hfs, filter.DefaultForwardedFilter)
+			}
+			if cfg.Filters.Healthcheck.Enabled {
+				hfs = append(hfs, filter.NewHealthCheckFilter(
+					cfg.Filters.Healthcheck.Method,
+					cfg.Filters.Healthcheck.Path,
+				))
+			}
 			if cfg.Filters.Certbot.Enabled {
 				hfs = append(hfs, filter.NewCertbotFilter(certbotConfig))
 			}

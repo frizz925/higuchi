@@ -23,8 +23,10 @@ type Config struct {
 		DisableStackTrace bool
 	}
 	Filters struct {
-		Auth    Auth
-		Certbot Certbot
+		Auth        Auth
+		Certbot     Certbot
+		Forwarded   Forwarded
+		Healthcheck Healthcheck
 	}
 }
 
@@ -39,6 +41,16 @@ type Certbot struct {
 	Hostname      string
 	Webroot       string
 	ChallengePath string
+}
+
+type Forwarded struct {
+	Enabled bool
+}
+
+type Healthcheck struct {
+	Enabled bool
+	Method  string
+	Path    string
 }
 
 func (a Auth) Pepper() ([]byte, error) {

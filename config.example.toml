@@ -23,3 +23,11 @@ Enabled = false
 Hostname = "localhost"
 Webroot = "/opt/www"
 ChallengePath = "/.well-known/acme-challenge"
+
+[Filters.Forwarded]
+Enabled = false
+
+[Filters.Healthcheck]
+Enabled = false
+Method = "OPTIONS"
+Path = "/healthz"

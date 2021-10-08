@@ -28,5 +28,9 @@ func (hcf *HealthCheckFilter) Do(ctx *Context, req *http.Request, next Next) err
 		ProtoMinor: req.ProtoMinor,
 		Request:    req,
 	}, bw)
-	return bw.Flush()
+	if err := bw.Flush(); err != nil {
+		return err
+	}
+	ctx.Logger.Info("Healthcheck called")
+	return nil
 }

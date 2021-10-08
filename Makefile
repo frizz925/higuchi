@@ -1,6 +1,10 @@
+GORUN=go run
 GOTEST=go test
 GOBUILD=go build -ldflags="-s -w"
 BUILD_OUTPUT=bin/higuchi
+
+serve:
+	$(GORUN) . serve
 
 test:
 	$(GOTEST) ./...
