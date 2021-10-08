@@ -16,21 +16,24 @@ import (
 func TestParseFilter(t *testing.T) {
 	require := require.New(t)
 	expectedBody, expectedHost := "expected", "localhost"
-	pf := NewParseFilter(HTTPFilterFunc(func(c *Context, req *http.Request, next Next) error {
-		defer req.Body.Close()
-		var buf bytes.Buffer
-		res := fmt.Sprintf("host=%s body=", req.Host)
-		if _, err := buf.WriteString(res); err != nil {
-			return err
-		}
-		if _, err := buf.ReadFrom(req.Body); err != nil && err != io.EOF {
-			return err
-		}
-		if _, err := buf.WriteTo(c); err != nil {
-			return err
-		}
-		return nil
-	}))
+	pf := NewParseFilter(
+		DefaultBufferSize,
+		HTTPFilterFunc(func(c *Context, req *http.Request, next Next) error {
+			defer req.Body.Close()
+			var buf bytes.Buffer
+			res := fmt.Sprintf("host=%s body=", req.Host)
+			if _, err := buf.WriteString(res); err != nil {
+				return err
+			}
+			if _, err := buf.ReadFrom(req.Body); err != nil && err != io.EOF {
+				return err
+			}
+			if _, err := buf.WriteTo(c); err != nil {
+				return err
+			}
+			return nil
+		}),
+	)
 
 	c1, c2 := net.Pipe()
 	errCh := make(chan error, 1)

@@ -37,6 +37,7 @@ func (ts *serverTestSuite) SetupSuite() {
 
 	ts.pool = pool.NewSinglePool(worker.New(0,
 		filter.NewParseFilter(
+			DefaultBufferSize,
 			filter.NewCertbotFilter(filter.CertbotConfig{ChallengePath: "/no-challenge"}),
 			filter.NewAuthFilter(map[string]interface{}{user: pass}),
 			filter.NewTunnelFilter(DefaultBufferSize),

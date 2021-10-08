@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"strings"
+	"sync"
 
 	"github.com/frizz925/higuchi/internal/netutil"
 )
@@ -13,17 +14,26 @@ const DefaultBufferSize = 512
 
 type ParseFilter struct {
 	filters []HTTPFilter
+	bufPool sync.Pool
 }
 
-func NewParseFilter(filters ...HTTPFilter) *ParseFilter {
-	return &ParseFilter{
+func NewParseFilter(bufsize int, filters ...HTTPFilter) *ParseFilter {
+	pf := &ParseFilter{
 		filters: filters,
 	}
+	pf.bufPool.New = func() interface{} {
+		return bufio.NewReaderSize(nil, bufsize)
+	}
+	return pf
 }
 
 func (pf *ParseFilter) Do(ctx *Context, next Next) error {
-	req, err := http.ReadRequest(bufio.NewReaderSize(ctx, DefaultBufferSize))
+	rd := pf.bufPool.Get().(*bufio.Reader)
+	rd.Reset(ctx)
+
+	req, err := http.ReadRequest(rd)
 	if err != nil {
+		pf.bufPool.Put(rd)
 		return err
 	}
 	defer req.Body.Close()
@@ -40,6 +50,7 @@ func (pf *ParseFilter) Do(ctx *Context, next Next) error {
 	}
 	req.Header = newHeader
 
+	pf.bufPool.Put(rd)
 	b, err := httputil.DumpRequestOut(req, true)
 	if err != nil {
 		return err
