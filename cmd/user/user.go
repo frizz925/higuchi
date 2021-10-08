@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type userCommandFunc func(cmd *cobra.Command, args []string, h *hasher.Argon2Hasher, users auth.Argon2Users) (auth.Argon2Users, error)
+type userCommandFunc func(cmd *cobra.Command, args []string, h *hasher.MD5Hasher, users auth.Users) (auth.Users, error)
 
 var userCmd = &cobra.Command{
 	Use:   "user",
@@ -37,8 +37,8 @@ func runCmd(cmd *cobra.Command, args []string, fn userCommandFunc) error {
 	if err != nil {
 		return fmt.Errorf("failed to decode pepper: %v", err)
 	}
-	h := hasher.NewArgon2Hasher(pepper)
-	aa := auth.NewArgon2Auth(h)
+	h := hasher.NewMD5Hasher(pepper)
+	fa := auth.NewFileAuth(h)
 
 	pf := cfg.Filters.Auth.PasswordsFile
 	if _, err := os.Stat(pf); os.IsNotExist(err) {
@@ -47,7 +47,7 @@ func runCmd(cmd *cobra.Command, args []string, fn userCommandFunc) error {
 			return fmt.Errorf("failed to create passwords file: %v", err)
 		}
 	}
-	users, err := aa.ReadPasswordsFile(pf)
+	users, err := fa.ReadPasswordsFile(pf)
 	if err != nil {
 		return fmt.Errorf("failed to read passwords file: %v", err)
 	}
@@ -57,7 +57,7 @@ func runCmd(cmd *cobra.Command, args []string, fn userCommandFunc) error {
 		return fmt.Errorf("failed to update users: %v", err)
 	}
 
-	err = aa.WritePasswordsFile(pf, newUsers)
+	err = fa.WritePasswordsFile(pf, newUsers)
 	if err != nil {
 		return fmt.Errorf("failed to write passwords file: %v", err)
 	}

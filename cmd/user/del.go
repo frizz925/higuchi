@@ -17,7 +17,7 @@ var delCmd = &cobra.Command{
 	},
 }
 
-func runDel(cmd *cobra.Command, args []string, h *hasher.Argon2Hasher, users auth.Argon2Users) (auth.Argon2Users, error) {
+func runDel(cmd *cobra.Command, args []string, h *hasher.MD5Hasher, users auth.Users) (auth.Users, error) {
 	out := cmd.OutOrStdout()
 	for _, user := range args {
 		fmt.Fprintf(out, "Deleting user %s\n", user)

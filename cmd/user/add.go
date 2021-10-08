@@ -19,13 +19,13 @@ var addCmd = &cobra.Command{
 	},
 }
 
-func runAdd(cmd *cobra.Command, args []string, h *hasher.Argon2Hasher, users auth.Argon2Users) (auth.Argon2Users, error) {
+func runAdd(cmd *cobra.Command, args []string, h *hasher.MD5Hasher, users auth.Users) (auth.Users, error) {
 	for _, user := range args {
 		password, err := promptPassword(cmd, user)
 		if err != nil {
 			return nil, err
 		}
-		ad, err := hasher.NewArgon2Digest(h, password)
+		ad, err := hasher.NewMD5Digest(h, password)
 		if err != nil {
 			return nil, err
 		}
