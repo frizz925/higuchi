@@ -95,12 +95,6 @@ func runServe() error {
 			if cfg.Filters.Forwarded.Enabled {
 				hfs = append(hfs, filter.DefaultForwardedFilter)
 			}
-			if cfg.Filters.Healthcheck.Enabled {
-				hfs = append(hfs, filter.NewHealthCheckFilter(
-					cfg.Filters.Healthcheck.Method,
-					cfg.Filters.Healthcheck.Path,
-				))
-			}
 			if cfg.Filters.Certbot.Enabled {
 				hfs = append(hfs, filter.NewCertbotFilter(certbotConfig))
 			}
@@ -113,7 +107,16 @@ func runServe() error {
 				filter.NewTunnelFilter(cfg.Worker.BufferSize),
 				filter.NewForwardFilter(df),
 			)
-			return worker.New(num, filter.NewParseFilter(hfs...))
+
+			filters := []filter.Filter{}
+			if cfg.Filters.Healthcheck.Enabled {
+				filters = append(filters, filter.NewHealthCheckFilter(
+					cfg.Filters.Healthcheck.Method,
+					cfg.Filters.Healthcheck.Path,
+				))
+			}
+			filters = append(filters, filter.NewParseFilter(hfs...))
+			return worker.New(num, filters...)
 		}, 1024),
 	})
 
