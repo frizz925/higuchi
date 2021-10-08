@@ -21,10 +21,7 @@ func TestWorker(t *testing.T) {
 	c1, c2 := net.Pipe()
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- w.Handle(&filter.Context{
-			Conn:   c2,
-			Logger: zap.NewExample(),
-		})
+		errCh <- w.Handle(filter.NewContext(c2, zap.NewExample()))
 		close(errCh)
 	}()
 

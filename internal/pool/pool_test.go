@@ -14,14 +14,14 @@ func testPool(t *testing.T, p Pool) {
 	expected := []byte("expected")
 	c1, c2 := net.Pipe()
 	errCh := make(chan error, 1)
-	p.Dispatch(&filter.Context{
-		Conn:   c2,
-		Logger: zap.NewExample(),
-	}, func(ctx *filter.Context, err error) {
-		defer ctx.Close()
-		errCh <- err
-		close(errCh)
-	})
+	p.Dispatch(
+		filter.NewContext(c2, zap.NewExample()),
+		func(ctx *filter.Context, err error) {
+			defer ctx.Close()
+			errCh <- err
+			close(errCh)
+		},
+	)
 
 	_, err := c1.Write(expected)
 	require.NoError(err)
