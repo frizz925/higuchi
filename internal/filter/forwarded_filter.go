@@ -16,7 +16,7 @@ func (ff ForwardedFilter) Do(ctx *Context, req *http.Request, next Next) error {
 		ctx.LogFields.Source = src
 	}
 	if host := req.Header.Get("X-Forwarded-Host"); host != "" {
-		ctx.LogFields.Listener = host
+		ctx.LogFields.Server = host
 	}
 	ctx.UpdateLogger()
 	return next()

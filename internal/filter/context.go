@@ -10,7 +10,7 @@ import (
 type LogFields struct {
 	Worker      int
 	Proto       string
-	Listener    string
+	Server      string
 	Source      string
 	Destination string
 	User        string
@@ -44,8 +44,8 @@ func (c *Context) UpdateLogger() {
 	if lf.Proto != "" {
 		zf = append(zf, zap.String("proto", lf.Proto))
 	}
-	if lf.Listener != "" {
-		zf = append(zf, zap.String("listener", lf.Listener))
+	if lf.Server != "" {
+		zf = append(zf, zap.String("server", lf.Server))
 	}
 	if lf.Source != "" {
 		zf = append(zf, zap.String("src", lf.Source))

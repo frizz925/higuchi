@@ -16,20 +16,20 @@ import (
 	"go.uber.org/zap"
 )
 
-type serverTestSuite struct {
+type managerTestSuite struct {
 	suite.Suite
 
-	client   *http.Client
-	pool     *pool.SinglePool
-	server   *Server
-	listener *Listener
+	client  *http.Client
+	pool    *pool.SinglePool
+	manager *Manager
+	server  *Server
 }
 
-func TestServer(t *testing.T) {
-	suite.Run(t, new(serverTestSuite))
+func TestManager(t *testing.T) {
+	suite.Run(t, new(managerTestSuite))
 }
 
-func (ts *serverTestSuite) SetupSuite() {
+func (ts *managerTestSuite) SetupSuite() {
 	var err error
 	require := ts.Require()
 	logger := zap.NewExample()
@@ -46,15 +46,15 @@ func (ts *serverTestSuite) SetupSuite() {
 	))
 	ts.pool.Start()
 
-	ts.server = New(Config{
+	ts.manager = NewManager(ManagerConfig{
 		Pool:   ts.pool,
 		Logger: logger,
 	})
 
-	ts.listener, err = ts.server.Listen("tcp", "127.0.0.1:0")
+	ts.server, err = ts.manager.ListenAndServe("tcp", "127.0.0.1:0")
 	require.NoError(err)
 	proxyUrl := &url.URL{
-		Host: ts.listener.Addr().String(),
+		Host: ts.server.Addr().String(),
 		User: url.UserPassword(user, pass),
 	}
 
@@ -65,14 +65,14 @@ func (ts *serverTestSuite) SetupSuite() {
 	}
 }
 
-func (ts *serverTestSuite) TearDownSuite() {
+func (ts *managerTestSuite) TearDownSuite() {
 	require := ts.Require()
-	require.NoError(ts.listener.Close())
 	require.NoError(ts.server.Close())
+	require.NoError(ts.manager.Close())
 	ts.pool.Stop()
 }
 
-func (ts *serverTestSuite) TestE2E() {
+func (ts *managerTestSuite) TestE2E() {
 	require := ts.Require()
 	srv, expected, err := createTestWebServer()
 	require.NoError(err)

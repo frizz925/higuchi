@@ -21,5 +21,5 @@ func TestForwardedFilter(t *testing.T) {
 	require.NoError(err)
 	require.Equal("dummy", ctx.LogFields.Proto)
 	require.Equal("localhost:20450", ctx.LogFields.Source)
-	require.Equal("localhost:8080", ctx.LogFields.Listener)
+	require.Equal("localhost:8080", ctx.LogFields.Server)
 }

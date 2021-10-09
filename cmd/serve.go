@@ -80,7 +80,7 @@ func runServe(cfg config.Config, logger *zap.Logger) error {
 	}
 	filters = append(filters, filter.NewParseFilter(cfg.Worker.BufferSize, hfs...))
 
-	s := server.New(server.Config{
+	mgr := server.NewManager(server.ManagerConfig{
 		Logger: logger,
 		Pool: pool.NewDynamicPool(func(num int) *worker.Worker {
 			return worker.New(num, filters...)
@@ -93,7 +93,7 @@ func runServe(cfg config.Config, logger *zap.Logger) error {
 			network = "unix"
 			addr = addr[unixAddressPrefixLength:]
 		}
-		if _, err := s.Listen(network, addr); err != nil {
+		if _, err := mgr.ListenAndServe(network, addr); err != nil {
 			return err
 		}
 		logger.Info(fmt.Sprintf("Higuchi listening at %s", addr))
@@ -104,7 +104,7 @@ func runServe(cfg config.Config, logger *zap.Logger) error {
 	sig := <-sigCh
 	logger.Info("Received stop signal", zap.String("signal", sig.String()))
 
-	return s.Close()
+	return mgr.Close()
 }
 
 func createAuthFilter(authCfg config.Auth) (*filter.AuthFilter, error) {
