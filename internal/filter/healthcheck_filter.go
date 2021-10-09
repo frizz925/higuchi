@@ -43,7 +43,7 @@ func (hcf *HealthCheckFilter) Do(ctx *Context, next Next) error {
 	}
 
 	if method != hcf.method || path != hcf.path {
-		b = append(b, '\r', '\n')
+		b = append(b, "\r\n"...)
 		n := rd.Buffered()
 		if n > 0 {
 			p := make([]byte, n)
