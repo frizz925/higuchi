@@ -1,5 +1,5 @@
 GORUN=go run
-GOTEST=go test
+GOTEST=go test -race
 GOBUILD=go build -ldflags="-s -w"
 BUILD_OUTPUT=bin/higuchi
 
