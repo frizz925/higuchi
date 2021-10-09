@@ -1,7 +1,7 @@
 GORUN=go run
 GOTEST=go test -race
 GOBUILD=go build -ldflags="-s -w"
-GOBENCHMARK=go test -benchmem -bench=BenchmarkWorker -benchtime=10s
+GOBENCHMARK=go test -benchmem -bench=BenchmarkWorker
 BUILD_OUTPUT=bin/higuchi
 
 serve:
@@ -11,10 +11,10 @@ test:
 	$(GOTEST) ./...
 
 benchmark:
-	$(GOBENCHMARK) ./internal/worker
+	$(GOBENCHMARK) -benchtime=10s ./internal/worker
 
 benchmark-single-core:
-	GOMAXPROCS=1 $(GOBENCHMARK) ./internal/worker
+	GOMAXPROCS=1 $(GOBENCHMARK) -benchtime=10s ./internal/worker
 
 build-linux-amd64:
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BUILD_OUTPUT)-linux-amd64 .

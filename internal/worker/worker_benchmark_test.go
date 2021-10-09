@@ -1,59 +1,54 @@
 package worker
 
 import (
-	"bufio"
-	"bytes"
-	"crypto/rand"
-	"fmt"
 	"io"
 	"net"
-	"net/http"
-	"net/url"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/frizz925/higuchi/internal/crypto/hasher"
 	"github.com/frizz925/higuchi/internal/dispatcher"
 	"github.com/frizz925/higuchi/internal/filter"
-	"github.com/frizz925/higuchi/internal/httputil"
-	"github.com/stretchr/testify/require"
+	"github.com/frizz925/higuchi/internal/testutil"
+
 	"go.uber.org/zap"
 )
 
-const TestBufferSize = 1024
+const testBufferSize = 512
+
+var (
+	rawProxyRequest = testutil.LinesToRawHeader(
+		"GET http://pipe/ HTTP/1.1",
+		"Host: pipe",
+		"Proxy-Authorization: Basic dXNlcjpwYXNzd29yZA==",
+	)
+	rawProxyResponse = testutil.LinesToRawHeader(
+		"HTTP/1.1 200 OK",
+	)
+)
 
 func BenchmarkWorker(b *testing.B) {
-	require := require.New(b)
 	logger := zap.NewNop()
 	username, password := "user", "password"
-	magicaddr := "memory:80"
-
-	sampleBody := make([]byte, TestBufferSize)
-	n, err := rand.Read(sampleBody)
-	require.NoError(err)
-	sampleBody = sampleBody[:n]
 
 	h := hasher.NewMD5Hasher([]byte("pepper"))
 	md, err := hasher.NewMD5Digest(h, password)
-	require.NoError(err)
+	if err != nil {
+		b.Fatal("error while creating digest", err)
+	}
 	users := map[string]interface{}{
 		username: md,
 	}
 
-	bw := bufio.NewWriterSize(nil, TestBufferSize)
 	df := dispatcher.DispatcherFunc(func(rw io.ReadWriter, _ string) error {
-		bw.Reset(rw)
-		httputil.WriteResponseHeader(&http.Response{
-			Status:     "200 OK",
-			StatusCode: http.StatusOK,
-			Proto:      "HTTP/1.1",
-			ProtoMajor: 1,
-			ProtoMinor: 1,
-		}, bw)
-		return bw.Flush()
+		_, err := rw.Write(rawProxyResponse)
+		return err
 	})
-	w := New(0,
+
+	filters := []filter.Filter{
 		filter.NewHealthCheckFilter("OPTIONS", "/healthz"),
-		filter.NewParseFilter(TestBufferSize,
+		filter.NewParseFilter(testBufferSize,
 			filter.DefaultForwardedFilter,
 			filter.NewCertbotFilter(filter.CertbotConfig{
 				Hostname:      "localhost",
@@ -67,46 +62,49 @@ func BenchmarkWorker(b *testing.B) {
 				}
 				return v.Compare(password) == 0
 			}),
-			filter.NewTunnelFilter(TestBufferSize),
+			filter.NewTunnelFilter(testBufferSize),
 			filter.NewForwardFilter(filter.NewDispatchFilter(df)),
 		),
-	)
+	}
 
-	connCh := make(chan net.Conn)
-	defer close(connCh)
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyURL(&url.URL{
-				Scheme: "http",
-				Host:   magicaddr,
-				User:   url.UserPassword(username, password),
-			}),
-			Dial: func(network, addr string) (net.Conn, error) {
-				if network != "tcp" || addr != magicaddr {
-					return nil, fmt.Errorf("unexpected dial: %s %s", network, addr)
-				}
-				c1, c2 := net.Pipe()
-				connCh <- c2
-				return c1, nil
-			},
+	var counter uint32 = 0
+	pool := sync.Pool{
+		New: func() interface{} {
+			num := atomic.AddUint32(&counter, 1)
+			return New(int(num), filters...)
 		},
 	}
-	go func() {
+
+	connCh := make(chan net.Conn)
+	doneCh := make(chan struct{})
+	go func(connCh <-chan net.Conn, doneCh <-chan struct{}) {
 		for {
-			conn, ok := <-connCh
-			if !ok {
+			select {
+			case conn := <-connCh:
+				w := pool.Get().(*Worker)
+				ctx := filter.NewContext(conn, logger)
+				if err := w.Handle(ctx); err != nil {
+					b.Logf("error handling: %v", err)
+				}
+				conn.Close()
+				pool.Put(w)
+			case <-doneCh:
 				return
 			}
-			if err := w.Handle(filter.NewContext(conn, logger)); err != nil {
-				b.Logf("error handling: %v", err)
-			}
-			conn.Close()
 		}
-	}()
+	}(connCh, doneCh)
 
+	buf := make([]byte, testBufferSize)
 	for i := 0; i < b.N; i++ {
-		_, err := client.Post("http://pipe/", "application/octet-stream", bytes.NewReader(sampleBody))
-		require.NoError(err)
+		c1, c2 := net.Pipe()
+		connCh <- c2
+		_, err = c1.Write(rawProxyRequest)
+		if err != nil {
+			b.Fatal("error while writing request", err)
+		}
+		_, err = c1.Read(buf)
+		if err != nil {
+			b.Fatal("error while reading response", err)
+		}
 	}
 }

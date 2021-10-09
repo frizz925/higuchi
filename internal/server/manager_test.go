@@ -36,6 +36,7 @@ func (ts *managerTestSuite) SetupSuite() {
 	user, pass := "testuser", "testpass"
 
 	ts.pool = pool.NewSinglePool(worker.New(0,
+		filter.NewHealthCheckFilter("OPTIONS", "/"),
 		filter.NewParseFilter(
 			DefaultBufferSize,
 			filter.NewCertbotFilter(filter.CertbotConfig{ChallengePath: "/no-challenge"}),

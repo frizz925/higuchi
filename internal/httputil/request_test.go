@@ -19,7 +19,7 @@ func TestParseRequestHeader(t *testing.T) {
 	}{
 		{
 			name: "plain proxy request",
-			rawBody: testutil.LinesToRawRequestHeader(
+			rawBody: testutil.LinesToRawHeader(
 				"GET http://example.org/ HTTP/1.1",
 				"Host: example.org",
 				"User-Agent: curl/7.64.1",
@@ -35,7 +35,7 @@ func TestParseRequestHeader(t *testing.T) {
 		},
 		{
 			name: "tunnel proxy request",
-			rawBody: testutil.LinesToRawRequestHeader(
+			rawBody: testutil.LinesToRawHeader(
 				"CONNECT example.org:80 HTTP/1.1",
 				"Host: example.org:80",
 				"User-Agent: curl/7.64.1",

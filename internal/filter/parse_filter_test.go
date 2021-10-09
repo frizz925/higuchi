@@ -46,7 +46,7 @@ func TestParseFilter(t *testing.T) {
 		close(errCh)
 	}()
 
-	_, err := c1.Write(testutil.LinesToRawRequest(
+	_, err := c1.Write(testutil.LinesToRawPayload(
 		"GET / HTTP/1.1",
 		fmt.Sprintf("Host: %s", expectedHost),
 		"User-Agent: curl/7.64.1",
