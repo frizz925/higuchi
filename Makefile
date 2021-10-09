@@ -1,6 +1,7 @@
 GORUN=go run
 GOTEST=go test -race
 GOBUILD=go build -ldflags="-s -w"
+GOBENCHMARK=go test -benchmem -bench ^Benchmark
 BUILD_OUTPUT=bin/higuchi
 
 serve:
@@ -8,6 +9,9 @@ serve:
 
 test:
 	$(GOTEST) ./...
+
+benchmark:
+	$(GOBENCHMARK) ./internal/worker
 
 build-linux-amd64:
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BUILD_OUTPUT)-linux-amd64 .
