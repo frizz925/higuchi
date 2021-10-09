@@ -68,12 +68,12 @@ func (l *Server) stop() error {
 
 func (l *Server) runRoutine() {
 	defer l.wg.Done()
-	laddr := l.Addr().String()
 	for l.running.Load() {
 		conn, err := l.Accept()
 		if err != nil {
 			return
 		}
+		laddr := conn.LocalAddr().String()
 		raddr := conn.RemoteAddr().String()
 		ctx := filter.NewContext(conn, l.logger, filter.LogFields{
 			Proto:  "http",
